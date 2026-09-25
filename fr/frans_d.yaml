@@ -1,0 +1,39 @@
+lesson: 4
+words:
+  - fr: lundi
+    nl: maandag, ma
+  - fr: mardi
+    nl: dinsdag, di
+  - fr: mercredi
+    nl: woensdag, wo
+  - fr: jeudi
+    nl: donderdag, do
+  - fr: vendredi
+    nl: vrijdag, vr
+  - fr: samedi
+    nl: zaterdag, za
+  - fr: dimanche
+    nl: zondag, zo
+  - fr: les devoirs
+    nl: het huiswerk
+  - fr: le garçon
+    nl: de jongen
+  - fr: la fille
+    nl: het meisje
+  - fr: la page
+    nl: de bladzijde
+  - fr: le mot
+    nl: het woord
+  - fr: aujourd'hui
+    nl: vandaag
+  - fr: apprends
+    nl: leer
+  - fr: fais
+    nl: doe, maak
+  - fr: travaille
+    nl: werk
+  - fr: complète
+    nl: vul in, vul aan
+sentences:
+  - fr: On a des devoirs ?
+    nl: Hebben we huiswerk?

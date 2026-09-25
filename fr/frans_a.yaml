@@ -1,0 +1,29 @@
+lesson: 1
+words:
+  - fr: bonjour
+    nl: hallo, goedendag
+  - fr: au revoir
+    nl: tot ziens
+  - fr: très bien
+    nl: heel goed
+  - fr: merci
+    nl: bedankt
+  - fr: c'est
+    nl: het is
+  - fr: le français
+    nl: het Frans
+  - fr: le prof
+    nl: de docent
+  - fr: l'exercice (m)
+    nl: de opdracht
+  - fr: oui
+    nl: ja
+  - fr: non
+    nl: nee
+sentences:
+  - fr: Comment tu t'appelles ?
+    nl: Hoe heet jij?
+  - fr: Je m'appelle Léo.
+    nl: Ik heet Léo.
+  - fr: Je ne sais pas.
+    nl: Ik weet het niet.

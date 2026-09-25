@@ -1,0 +1,10 @@
+lesson: 1
+words:
+  - fr: bonjour
+    nl: hallo, goedendag
+  - fr: au revoir
+    nl: tot ziens
+sentences:
+  - fr: Comment tu t'appelles ?
+    nl: Hoe heet jij?
+

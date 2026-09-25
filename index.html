@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Woordjes oefenen</title>
+<style>
+  :root {
+    --bg: #f4f6fb;
+    --card-bg: #ffffff;
+    --text: #1f2430;
+    --muted: #6b7280;
+    --accent: #3b6df0;
+    --accent-dark: #2851c9;
+    --good: #1f9d55;
+    --good-bg: #e6f8ed;
+    --bad: #d1372e;
+    --bad-bg: #fdeceb;
+    --border: #e2e5ec;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(20, 30, 60, 0.06);
+    padding: 36px;
+    width: 100%;
+    max-width: 560px;
+  }
+  h1 {
+    margin: 0 0 8px;
+    font-size: 1.5rem;
+  }
+  p.subtitle {
+    margin: 0 0 28px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+  .hint {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-top: 14px;
+    line-height: 1.4;
+  }
+  .file-label {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: background 0.15s ease;
+  }
+  .file-label:hover { background: var(--accent-dark); }
+  input[type="file"] { display: none; }
+  .warning {
+    margin-top: 16px;
+    background: var(--bad-bg);
+    color: var(--bad);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+  .progress {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .prompt {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-size: 2rem;
+    font-weight: 700;
+    text-align: center;
+    padding: 28px 12px;
+    margin: 10px 0 24px;
+    background: #f0f3fb;
+    border-radius: 12px;
+    word-break: break-word;
+  }
+  .prompt-text { word-break: break-word; }
+  .btn-speak {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 50%;
+  }
+  .btn-speak svg { width: 20px; height: 20px; }
+  input[type="text"] {
+    width: 100%;
+    font-size: 1.1rem;
+    padding: 14px 16px;
+    border-radius: 10px;
+    border: 2px solid var(--border);
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+  input[type="text"]:focus { border-color: var(--accent); }
+  input[type="text"]:disabled { background: #f7f8fb; color: var(--muted); }
+  .buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+    flex-wrap: wrap;
+  }
+  button {
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: filter 0.1s ease, opacity 0.1s ease;
+    flex: 1 1 auto;
+  }
+  button:disabled { opacity: 0.5; cursor: default; }
+  button:not(:disabled):hover { filter: brightness(1.08); }
+  .btn-check { background: var(--accent); color: #fff; }
+  .btn-know { background: #e7edfc; color: var(--accent-dark); }
+  .btn-dontknow { background: #f3f4f6; color: #4b5563; }
+  .btn-next { background: var(--text); color: #fff; width: 100%; margin-top: 16px; }
+  .end-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+  }
+  .btn-mistakes { background: var(--accent); color: #fff; }
+  .btn-all { background: #e7edfc; color: var(--accent-dark); }
+  .btn-newsession { background: #f3f4f6; color: #4b5563; }
+  .btn-flip { background: var(--good-bg); color: var(--good); }
+  .feedback {
+    margin-top: 18px;
+    padding: 14px 16px;
+    border-radius: 10px;
+    font-size: 1rem;
+    line-height: 1.5;
+    display: none;
+  }
+  .feedback.good { display: block; background: var(--good-bg); color: var(--good); }
+  .feedback.bad { display: block; background: var(--bad-bg); color: var(--bad); }
+  .feedback b { font-weight: 700; }
+  .score-line {
+    font-size: 1.3rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 18px;
+  }
+  .mistakes-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 18px 0 8px;
+  }
+  .mistakes-title {
+    font-weight: 700;
+  }
+  .btn-toggle-answers {
+    flex: 0 0 auto;
+    background: none;
+    color: var(--accent);
+    padding: 4px 0;
+    font-size: 0.85rem;
+    text-decoration: underline;
+  }
+  .btn-toggle-answers:hover { background: none; filter: none; color: var(--accent-dark); }
+  .skip-wrap {
+    display: flex;
+    justify-content: center;
+    margin-top: 10px;
+  }
+  .btn-skip {
+    flex: 0 0 auto;
+    background: none;
+    color: var(--muted);
+    padding: 4px 8px;
+    font-size: 0.85rem;
+    text-decoration: underline;
+    font-weight: 600;
+  }
+  .btn-skip:hover { background: none; filter: none; color: var(--text); }
+  .mistake-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    gap: 16px;
+  }
+  .mistake-row:last-child { border-bottom: none; }
+  .mistake-fr-wrap { display: flex; align-items: baseline; gap: 8px; }
+  .mistake-cross { color: var(--bad); font-weight: 700; }
+  .mistake-fr { color: var(--text); }
+  .mistake-nl { color: var(--muted); text-align: right; }
+  .no-mistakes {
+    text-align: center;
+    color: var(--good);
+    font-weight: 600;
+    padding: 10px 0;
+  }
+  .hidden { display: none !important; }
+  .file-list {
+    margin-top: 14px;
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+  .settings {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .setting-label {
+    font-weight: 700;
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+  }
+  .setting-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    font-size: 0.9rem;
+    color: var(--text);
+  }
+  .setting-options label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+  }
+</style>
+</head>
+<body>
+
+<div class="card" id="card">
+
+  <!-- Startscherm: bestand(en) kiezen -->
+  <div id="screen-start">
+    <h1>Woordjes oefenen</h1>
+    <p class="subtitle">Kies één of meerdere lesbestanden (.yaml) om jezelf te overhoren, van elke taal naar het Nederlands.</p>
+    <label class="file-label" for="file-input">Kies lesbestand(en)</label>
+    <input type="file" id="file-input" accept=".yaml,.yml" multiple>
+    <div class="file-list" id="file-list"></div>
+    <div class="warning hidden" id="start-warning"></div>
+    <p class="hint">Tip: je browser onthoudt meestal de laatst gebruikte map. Navigeer de eerste keer handmatig naar de map met je lesbestanden (bv. <b>fr/</b> of <b>en/</b>) — daarna opent de bestandskiezer daar vaak vanzelf weer.</p>
+    <div class="settings">
+      <div class="setting-group">
+        <div class="setting-label">Richting</div>
+        <div class="setting-options">
+          <label><input type="radio" name="direction" value="fwd" checked> Vreemde taal &rarr; Nederlands</label>
+          <label><input type="radio" name="direction" value="rev"> Nederlands &rarr; Vreemde taal</label>
+        </div>
+      </div>
+      <div class="setting-group">
+        <div class="setting-label">Geluid (automatisch voorlezen)</div>
+        <div class="setting-options">
+          <label><input type="radio" name="sound-mode" value="off" checked> Uit</label>
+          <label><input type="radio" name="sound-mode" value="foreign"> Vreemde taal</label>
+          <label><input type="radio" name="sound-mode" value="both"> Beide talen</label>
+        </div>
+      </div>
+      <div class="setting-group">
+        <div class="setting-label">Volgorde</div>
+        <div class="setting-options">
+          <label><input type="radio" name="order-mode" value="random" checked> Willekeurige volgorde</label>
+          <label><input type="radio" name="order-mode" value="original"> Originele volgorde</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quiz-scherm -->
+  <div id="screen-quiz" class="hidden">
+    <div class="progress">
+      <span id="progress-text"></span>
+      <span id="score-text"></span>
+    </div>
+    <div class="prompt">
+      <span class="prompt-text" id="prompt-text"></span>
+      <button class="btn-speak hidden" id="btn-speak" type="button" aria-label="Uitspraak beluisteren" title="Uitspraak beluisteren">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 14a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v5a3 3 0 0 0 3 3z"/>
+          <path d="M19 11a1 1 0 0 0-2 0 5 5 0 0 1-10 0 1 1 0 0 0-2 0 7 7 0 0 0 6 6.92V20H9a1 1 0 0 0 0 2h6a1 1 0 0 0 0-2h-2v-2.08A7 7 0 0 0 19 11z"/>
+        </svg>
+      </button>
+    </div>
+    <input type="text" id="answer-input" autocomplete="off" placeholder="Typ de Nederlandse vertaling...">
+    <div class="buttons">
+      <button class="btn-check" id="btn-check">Check</button>
+      <button class="btn-know" id="btn-know">Weet ik</button>
+      <button class="btn-dontknow" id="btn-dontknow">Weet ik niet</button>
+    </div>
+    <div class="skip-wrap">
+      <button class="btn-skip" id="btn-skip" type="button">Sla over</button>
+    </div>
+    <div class="feedback" id="feedback"></div>
+    <button class="btn-next hidden" id="btn-next">Volgende &rarr;</button>
+  </div>
+
+  <!-- Eindscherm -->
+  <div id="screen-end" class="hidden">
+    <h1>Klaar!</h1>
+    <div class="score-line" id="final-score"></div>
+    <div class="mistakes-header">
+      <div class="mistakes-title" id="mistakes-title"></div>
+      <button class="btn-toggle-answers hidden" id="btn-toggle-answers">Toon antwoorden</button>
+    </div>
+    <div id="mistakes-list"></div>
+    <div class="end-buttons">
+      <button class="btn-mistakes" id="btn-practice-mistakes">Oefen foute woorden</button>
+      <button class="btn-all" id="btn-practice-all">Oefen alle woorden</button>
+      <button class="btn-flip" id="btn-flip-direction"></button>
+      <button class="btn-newsession" id="btn-new-session">Nieuwe sessie</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  // ---------- Elements ----------
+  const screenStart = document.getElementById("screen-start");
+  const screenQuiz = document.getElementById("screen-quiz");
+  const screenEnd = document.getElementById("screen-end");
+
+  const fileInput = document.getElementById("file-input");
+  const fileListEl = document.getElementById("file-list");
+  const startWarning = document.getElementById("start-warning");
+
+  const progressText = document.getElementById("progress-text");
+  const scoreText = document.getElementById("score-text");
+  const promptText = document.getElementById("prompt-text");
+  const btnSpeak = document.getElementById("btn-speak");
+  const answerInput = document.getElementById("answer-input");
+  const btnCheck = document.getElementById("btn-check");
+  const btnKnow = document.getElementById("btn-know");
+  const btnDontKnow = document.getElementById("btn-dontknow");
+  const btnSkip = document.getElementById("btn-skip");
+  const btnNext = document.getElementById("btn-next");
+  const feedbackEl = document.getElementById("feedback");
+
+  const finalScoreEl = document.getElementById("final-score");
+  const mistakesTitle = document.getElementById("mistakes-title");
+  const mistakesList = document.getElementById("mistakes-list");
+  const btnToggleAnswers = document.getElementById("btn-toggle-answers");
+  const btnPracticeMistakes = document.getElementById("btn-practice-mistakes");
+  const btnPracticeAll = document.getElementById("btn-practice-all");
+  const btnFlipDirection = document.getElementById("btn-flip-direction");
+  const btnNewSession = document.getElementById("btn-new-session");
+
+  // ---------- State ----------
+  let playlist = [];
+  let currentIndex = 0;
+  let score = 0;
+  let mistakes = [];
+  let skipped = 0;
+  let answered = false;
+  let answersRevealed = false;
+  let direction = "fwd";
+  let soundMode = "off";
+
+  // ---------- Tiny YAML parser (tailored to the lesson file format) ----------
+  // Expected shape (taal-key is vrij, bepaalt de taal van het lesbestand):
+  // lesson: N
+  // words:
+  //   - fr: ...   (of en:, de:, ...)
+  //     nl: ...
+  // sentences:
+  //   - fr: ...
+  //     nl: ...
+  function parseLessonYaml(text) {
+    const lines = text.split(/\r?\n/);
+    const result = { words: [], sentences: [] };
+    let section = null; // "words" | "sentences" | null
+    let current = null; // item currently being filled
+
+    function stripValue(raw) {
+      let v = raw.trim();
+      if (
+        v.length >= 2 &&
+        ((v[0] === '"' && v[v.length - 1] === '"') ||
+          (v[0] === "'" && v[v.length - 1] === "'"))
+      ) {
+        v = v.slice(1, -1);
+      }
+      return v;
+    }
+
+    for (const rawLine of lines) {
+      const line = rawLine.replace(/\t/g, "  ");
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+
+      if (/^words\s*:/.test(trimmed)) {
+        section = "words";
+        current = null;
+        continue;
+      }
+      if (/^sentences\s*:/.test(trimmed)) {
+        section = "sentences";
+        current = null;
+        continue;
+      }
+      if (/^lesson\s*:/.test(trimmed)) {
+        continue;
+      }
+
+      if (!section) continue;
+
+      const itemStart = trimmed.match(/^-\s*([a-z]{2,3})\s*:\s*(.*)$/);
+      if (itemStart) {
+        current = { word: stripValue(itemStart[2]), nl: "", lang: itemStart[1] };
+        result[section].push(current);
+        continue;
+      }
+
+      const nlMatch = trimmed.match(/^nl\s*:\s*(.*)$/);
+      if (nlMatch && current) {
+        current.nl = stripValue(nlMatch[1]);
+        continue;
+      }
+    }
+
+    return result;
+  }
+
+  function isValidLessonData(data) {
+    return (
+      data &&
+      Array.isArray(data.words) &&
+      Array.isArray(data.sentences) &&
+      (data.words.length > 0 || data.sentences.length > 0) &&
+      data.words.every((w) => w.word && w.nl && w.lang) &&
+      data.sentences.every((s) => s.word && s.nl && s.lang)
+    );
+  }
+
+  // ---------- File handling ----------
+  let combinedWords = [];
+  let combinedSentences = [];
+
+  fileInput.addEventListener("change", async () => {
+    const files = Array.from(fileInput.files || []);
+    if (files.length === 0) return;
+
+    combinedWords = [];
+    combinedSentences = [];
+    const warnings = [];
+    const loadedNames = [];
+
+    for (const file of files) {
+      try {
+        const text = await file.text();
+        const data = parseLessonYaml(text);
+        if (!isValidLessonData(data)) {
+          warnings.push(`"${file.name}" heeft niet het verwachte formaat en is overgeslagen.`);
+          continue;
+        }
+        combinedWords = combinedWords.concat(data.words);
+        combinedSentences = combinedSentences.concat(data.sentences);
+        loadedNames.push(file.name);
+      } catch (err) {
+        warnings.push(`"${file.name}" kon niet gelezen worden en is overgeslagen.`);
+      }
+    }
+
+    fileListEl.textContent = loadedNames.length
+      ? "Geladen: " + loadedNames.join(", ")
+      : "";
+
+    if (warnings.length) {
+      startWarning.textContent = warnings.join(" ");
+      startWarning.classList.remove("hidden");
+    } else {
+      startWarning.classList.add("hidden");
+    }
+
+    if (combinedWords.length + combinedSentences.length > 0) {
+      startQuiz(combinedWords, combinedSentences);
+    }
+  });
+
+  // ---------- Quiz setup ----------
+  function shuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
+
+  function getOrderMode() {
+    const el = document.querySelector('input[name="order-mode"]:checked');
+    return el ? el.value : "random";
+  }
+
+  function buildPlaylist(words, sentences) {
+    if (getOrderMode() === "original") return words.concat(sentences);
+    return shuffle(words).concat(shuffle(sentences));
+  }
+
+  function startQuiz(words, sentences) {
+    beginSession(buildPlaylist(words, sentences));
+  }
+
+  function startMistakesQuiz() {
+    const items = getOrderMode() === "original" ? mistakes.slice() : shuffle(mistakes);
+    beginSession(items);
+  }
+
+  function getDirection() {
+    const el = document.querySelector('input[name="direction"]:checked');
+    return el ? el.value : "fwd";
+  }
+
+  function getSoundMode() {
+    const el = document.querySelector('input[name="sound-mode"]:checked');
+    return el ? el.value : "off";
+  }
+
+  function promptWord(item) {
+    return direction === "rev" ? item.nl : item.word;
+  }
+
+  function promptLang(item) {
+    return direction === "rev" ? "nl" : item.lang;
+  }
+
+  function answerWord(item) {
+    return direction === "rev" ? item.word : item.nl;
+  }
+
+  function answerLang(item) {
+    return direction === "rev" ? item.lang : "nl";
+  }
+
+  function beginSession(items, directionOverride) {
+    playlist = items;
+    currentIndex = 0;
+    score = 0;
+    mistakes = [];
+    skipped = 0;
+    direction = directionOverride || getDirection();
+    soundMode = getSoundMode();
+
+    screenStart.classList.add("hidden");
+    screenEnd.classList.add("hidden");
+    screenQuiz.classList.remove("hidden");
+
+    showCurrentItem();
+  }
+
+  function currentItem() {
+    return playlist[currentIndex];
+  }
+
+  function showCurrentItem() {
+    answered = false;
+    const item = currentItem();
+    progressText.textContent = `Woord ${currentIndex + 1} van ${playlist.length}`;
+    scoreText.textContent = `Score: ${score}`;
+    promptText.textContent = promptWord(item);
+    answerInput.value = "";
+    answerInput.disabled = false;
+    btnCheck.disabled = false;
+    btnKnow.disabled = false;
+    btnDontKnow.disabled = false;
+    btnSkip.disabled = false;
+    feedbackEl.className = "feedback";
+    feedbackEl.textContent = "";
+    btnNext.classList.add("hidden");
+    answerInput.focus();
+
+    if (soundMode !== "off") {
+      const lang = promptLang(item);
+      if (soundMode === "both" || (soundMode === "foreign" && lang !== "nl")) {
+        speak(promptWord(item), lang);
+      }
+    }
+  }
+
+  // ---------- Answer checking ----------
+  function stripDiacritics(s) {
+    return s.normalize("NFD").replace(/[̀-ͯ]/g, "");
+  }
+
+  function normalize(s) {
+    return stripDiacritics(s.toLowerCase())
+      .trim()
+      .replace(/[.?!]+$/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function isCorrectAnswer(userInput, correctAnswer) {
+    const normalizedInput = normalize(userInput);
+    if (!normalizedInput) return false;
+    const alternatives = correctAnswer.split(",").map(normalize);
+    return alternatives.includes(normalizedInput);
+  }
+
+  // ---------- Uitspraak (Web Speech API) ----------
+  const speechSupported = "speechSynthesis" in window;
+  if (speechSupported) {
+    btnSpeak.classList.remove("hidden");
+  }
+
+  const LANG_TAGS = { fr: "fr-FR", en: "en-US", nl: "nl-NL", de: "de-DE", es: "es-ES", it: "it-IT" };
+  function toBcp47(lang) {
+    return LANG_TAGS[lang] || lang;
+  }
+
+  function pickVoiceForLang(tag) {
+    const voices = window.speechSynthesis.getVoices();
+    const prefix = tag.slice(0, 2).toLowerCase();
+    return voices.find((v) => v.lang && v.lang.toLowerCase().startsWith(prefix)) || null;
+  }
+
+  function speak(text, lang) {
+    if (!speechSupported || !text) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    const tag = toBcp47(lang);
+    utterance.lang = tag;
+    const voice = pickVoiceForLang(tag);
+    if (voice) utterance.voice = voice;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  btnSpeak.addEventListener("click", () => {
+    const item = currentItem();
+    if (item) speak(promptWord(item), promptLang(item));
+  });
+
+  // ---------- Answer handling ----------
+  function markAnswered() {
+    answered = true;
+    answerInput.disabled = true;
+    btnCheck.disabled = true;
+    btnKnow.disabled = true;
+    btnDontKnow.disabled = true;
+    btnSkip.disabled = true;
+    btnNext.classList.remove("hidden");
+    btnNext.focus();
+  }
+
+  function handleResult(correct) {
+    if (answered) return;
+    const item = currentItem();
+    const answerText = answerWord(item);
+
+    if (correct) {
+      score += 1;
+      feedbackEl.className = "feedback good";
+      feedbackEl.innerHTML = `Goed! <b>${escapeHtml(answerText)}</b>`;
+    } else {
+      mistakes.push(item);
+      feedbackEl.className = "feedback bad";
+      feedbackEl.innerHTML = `Fout. Het juiste antwoord was: <b>${escapeHtml(answerText)}</b>`;
+    }
+
+    scoreText.textContent = `Score: ${score}`;
+    markAnswered();
+
+    if (soundMode !== "off") {
+      const lang = answerLang(item);
+      if (soundMode === "both" || (soundMode === "foreign" && lang !== "nl")) {
+        speak(answerText, lang);
+      }
+    }
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  btnCheck.addEventListener("click", () => {
+    if (answered) return;
+    const item = currentItem();
+    const correct = isCorrectAnswer(answerInput.value, answerWord(item));
+    handleResult(correct);
+  });
+
+  btnKnow.addEventListener("click", () => {
+    handleResult(true);
+  });
+
+  btnDontKnow.addEventListener("click", () => {
+    handleResult(false);
+  });
+
+  btnSkip.addEventListener("click", () => {
+    if (answered) return;
+    skipped += 1;
+    currentIndex += 1;
+    if (currentIndex >= playlist.length) {
+      showEndScreen();
+    } else {
+      showCurrentItem();
+    }
+  });
+
+  answerInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !answered) {
+      e.preventDefault();
+      btnCheck.click();
+    }
+  });
+
+  btnNext.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      btnNext.click();
+    }
+  });
+
+  btnNext.addEventListener("click", () => {
+    currentIndex += 1;
+    if (currentIndex >= playlist.length) {
+      showEndScreen();
+    } else {
+      showCurrentItem();
+    }
+  });
+
+  // ---------- End screen ----------
+  function showEndScreen() {
+    screenQuiz.classList.add("hidden");
+    screenEnd.classList.remove("hidden");
+    answersRevealed = false;
+
+    const answeredTotal = score + mistakes.length;
+    finalScoreEl.textContent = skipped > 0
+      ? `Score: ${score} / ${answeredTotal} (${skipped} overgeslagen)`
+      : `Score: ${score} / ${answeredTotal}`;
+    btnPracticeMistakes.disabled = mistakes.length === 0;
+
+    const lang = dominantForeignLang(playlist);
+    const flipped = direction === "fwd" ? "rev" : "fwd";
+    btnFlipDirection.textContent = flipped === "rev"
+      ? `Oefen woorden nl - ${lang}`
+      : `Oefen woorden ${lang} - nl`;
+
+    renderMistakes();
+  }
+
+  function dominantForeignLang(items) {
+    const langs = new Set(items.map((i) => i.lang));
+    return langs.size === 1 ? [...langs][0] : "vreemde taal";
+  }
+
+  function renderMistakes() {
+    if (mistakes.length === 0) {
+      mistakesTitle.textContent = "";
+      btnToggleAnswers.classList.add("hidden");
+      mistakesList.innerHTML = '<div class="no-mistakes">Alles goed! 🎉</div>';
+      return;
+    }
+
+    mistakesTitle.textContent = `Fout beantwoord (${mistakes.length}):`;
+    btnToggleAnswers.classList.remove("hidden");
+    btnToggleAnswers.textContent = answersRevealed ? "Verberg antwoorden" : "Toon antwoorden";
+
+    mistakesList.innerHTML = mistakes
+      .map((m) => {
+        const nlPart = answersRevealed
+          ? `<span class="mistake-nl">${escapeHtml(m.nl)}</span>`
+          : "";
+        return `<div class="mistake-row"><span class="mistake-fr-wrap"><span class="mistake-cross">&#10007;</span><span class="mistake-fr">${escapeHtml(m.word)}</span></span>${nlPart}</div>`;
+      })
+      .join("");
+  }
+
+  btnToggleAnswers.addEventListener("click", () => {
+    answersRevealed = !answersRevealed;
+    renderMistakes();
+  });
+
+  btnPracticeMistakes.addEventListener("click", () => {
+    if (mistakes.length === 0) return;
+    startMistakesQuiz();
+  });
+
+  btnPracticeAll.addEventListener("click", () => {
+    startQuiz(combinedWords, combinedSentences);
+  });
+
+  btnFlipDirection.addEventListener("click", () => {
+    const flipped = direction === "fwd" ? "rev" : "fwd";
+    beginSession(buildPlaylist(combinedWords, combinedSentences), flipped);
+  });
+
+  btnNewSession.addEventListener("click", () => {
+    screenEnd.classList.add("hidden");
+    screenQuiz.classList.add("hidden");
+    screenStart.classList.remove("hidden");
+    fileInput.value = "";
+    fileListEl.textContent = "";
+    startWarning.classList.add("hidden");
+  });
+})();
+</script>
+
+</body>
+</html>
