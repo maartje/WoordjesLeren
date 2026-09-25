@@ -146,16 +146,44 @@
   .btn-know { background: #e7edfc; color: var(--accent-dark); }
   .btn-dontknow { background: #f3f4f6; color: #4b5563; }
   .btn-next { background: var(--text); color: #fff; width: 100%; margin-top: 16px; }
-  .end-buttons {
+  .end-actions {
+    margin-top: 20px;
+  }
+  .btn-primary-cta {
+    width: 100%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 1.05rem;
+    padding: 16px;
+  }
+  .end-primary-caption {
+    text-align: center;
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin: 6px 0 4px;
+  }
+  .secondary-actions {
     display: flex;
     gap: 10px;
-    margin-top: 20px;
+    margin-top: 16px;
     flex-wrap: wrap;
   }
-  .btn-mistakes { background: var(--accent); color: #fff; }
-  .btn-all { background: #e7edfc; color: var(--accent-dark); }
-  .btn-newsession { background: #f3f4f6; color: #4b5563; }
-  .btn-flip { background: var(--good-bg); color: var(--good); }
+  .btn-mistakes { background: #e7edfc; color: var(--accent-dark); }
+  .btn-all { background: #fff; color: var(--accent-dark); border: 1.5px solid #d3ddf7; }
+  .btn-flip { background: #f3f4f6; color: #4b5563; }
+  .btn-newsession-link {
+    display: block;
+    width: 100%;
+    background: none;
+    color: var(--muted);
+    text-decoration: underline;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 6px 0;
+    margin-top: 18px;
+    text-align: center;
+  }
+  .btn-newsession-link:hover { background: none; filter: none; color: var(--text); }
   .feedback {
     margin-top: 18px;
     padding: 14px 16px;
@@ -334,11 +362,17 @@
       <button class="btn-toggle-answers hidden" id="btn-toggle-answers">Toon antwoorden</button>
     </div>
     <div id="mistakes-list"></div>
-    <div class="end-buttons">
-      <button class="btn-mistakes" id="btn-practice-mistakes">Oefen foute woorden</button>
-      <button class="btn-all" id="btn-practice-all">Oefen alle woorden</button>
-      <button class="btn-flip" id="btn-flip-direction"></button>
-      <button class="btn-newsession" id="btn-new-session">Nieuwe sessie</button>
+    <div class="end-actions">
+      <button class="btn-primary-cta" id="btn-smart-practice" type="button">Slim oefenen</button>
+      <div class="end-primary-caption">Kiest een mix van je foute en minder zekere woorden</div>
+
+      <div class="secondary-actions">
+        <button class="btn-mistakes" id="btn-practice-mistakes">Oefen foute woorden</button>
+        <button class="btn-all" id="btn-practice-all">Oefen alle woorden</button>
+        <button class="btn-flip" id="btn-flip-direction"></button>
+      </div>
+
+      <button class="btn-newsession-link" id="btn-new-session" type="button">Nieuwe sessie</button>
     </div>
   </div>
 
@@ -373,6 +407,7 @@
   const mistakesTitle = document.getElementById("mistakes-title");
   const mistakesList = document.getElementById("mistakes-list");
   const btnToggleAnswers = document.getElementById("btn-toggle-answers");
+  const btnSmartPractice = document.getElementById("btn-smart-practice");
   const btnPracticeMistakes = document.getElementById("btn-practice-mistakes");
   const btnPracticeAll = document.getElementById("btn-practice-all");
   const btnFlipDirection = document.getElementById("btn-flip-direction");
@@ -388,6 +423,7 @@
   let answersRevealed = false;
   let direction = "fwd";
   let soundMode = "off";
+  let wordStats = new Map();
 
   // ---------- Tiny YAML parser (tailored to the lesson file format) ----------
   // Expected shape (taal-key is vrij, bepaalt de taal van het lesbestand):
@@ -473,6 +509,7 @@
     const files = Array.from(fileInput.files || []);
     if (files.length === 0) return;
 
+    wordStats = new Map();
     combinedWords = [];
     combinedSentences = [];
     const warnings = [];
@@ -675,10 +712,22 @@
     btnNext.focus();
   }
 
+  function statFor(item) {
+    return wordStats.get(item) || { good: 0, bad: 0 };
+  }
+
+  function recordStat(item, correct) {
+    const stat = statFor(item);
+    if (correct) stat.good += 1;
+    else stat.bad += 1;
+    wordStats.set(item, stat);
+  }
+
   function handleResult(correct) {
     if (answered) return;
     const item = currentItem();
     const answerText = answerWord(item);
+    recordStat(item, correct);
 
     if (correct) {
       score += 1;
@@ -782,6 +831,47 @@
     return langs.size === 1 ? [...langs][0] : "vreemde taal";
   }
 
+  function appearProbability(item) {
+    const stat = statFor(item);
+    return Math.max(stat.good / (stat.good + stat.bad + 1), 0.1);
+  }
+
+  function buildSmartPlaylist() {
+    const allItems = combinedWords.concat(combinedSentences);
+    const total = allItems.length;
+    const minTarget = Math.min(total, total < 5 ? Math.ceil(total / 2) : 5);
+
+    const included = new Set(mistakes);
+    const leftover = [];
+
+    for (const item of allItems) {
+      if (included.has(item)) continue;
+      const p = appearProbability(item);
+      if (Math.random() < p) {
+        included.add(item);
+      } else {
+        leftover.push({ item, p });
+      }
+    }
+
+    if (included.size < minTarget) {
+      leftover.sort((a, b) => b.p - a.p);
+      for (const { item } of leftover) {
+        if (included.size >= minTarget) break;
+        included.add(item);
+      }
+    }
+
+    const selected = Array.from(included);
+    return getOrderMode() === "original" ? selected : shuffle(selected);
+  }
+
+  function formatMistakeStat(item) {
+    const stat = statFor(item);
+    const total = stat.good + stat.bad;
+    return `${stat.bad}<span class="mistake-cross">&#10007;</span> / ${total}`;
+  }
+
   function renderMistakes() {
     if (mistakes.length === 0) {
       mistakesTitle.textContent = "";
@@ -798,7 +888,7 @@
       .map((m) => {
         const nlPart = answersRevealed
           ? `<span class="mistake-nl">${escapeHtml(m.nl)}</span>`
-          : "";
+          : `<span class="mistake-nl">${formatMistakeStat(m)}</span>`;
         return `<div class="mistake-row"><span class="mistake-fr-wrap"><span class="mistake-cross">&#10007;</span><span class="mistake-fr">${escapeHtml(m.word)}</span></span>${nlPart}</div>`;
       })
       .join("");
@@ -819,8 +909,13 @@
   });
 
   btnFlipDirection.addEventListener("click", () => {
+    wordStats = new Map();
     const flipped = direction === "fwd" ? "rev" : "fwd";
     beginSession(buildPlaylist(combinedWords, combinedSentences), flipped);
+  });
+
+  btnSmartPractice.addEventListener("click", () => {
+    beginSession(buildSmartPlaylist());
   });
 
   btnNewSession.addEventListener("click", () => {
