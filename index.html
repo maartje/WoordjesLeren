@@ -833,7 +833,7 @@
 
   function appearProbability(item) {
     const stat = statFor(item);
-    return Math.max(stat.good / (stat.good + stat.bad + 1), 0.1);
+    return Math.max((stat.bad + 1) / (stat.good + stat.bad + 1), 0.1);
   }
 
   function buildSmartPlaylist() {
