@@ -48,11 +48,20 @@
     color: var(--muted);
     line-height: 1.5;
   }
-  .hint {
-    font-size: 0.85rem;
+  .hint-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin-left: 8px;
+    border-radius: 50%;
+    background: var(--border);
     color: var(--muted);
-    margin-top: 14px;
-    line-height: 1.4;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: help;
+    vertical-align: middle;
   }
   .file-label {
     display: inline-block;
@@ -100,13 +109,6 @@
   }
   .btn-resume { background: var(--accent); color: #fff; }
   .btn-dismiss-resume { background: #fff; color: var(--accent-dark); border: 1.5px solid #d3ddf7; }
-  .btn-clear-progress {
-    background: none;
-    color: var(--muted);
-    text-decoration: underline;
-    padding: 8px 4px;
-  }
-  .btn-clear-progress:hover { background: none; filter: none; color: var(--bad); }
   .progress {
     color: var(--muted);
     font-size: 0.9rem;
@@ -201,7 +203,6 @@
   }
   .btn-mistakes { background: #e7edfc; color: var(--accent-dark); }
   .btn-all { background: #fff; color: var(--accent-dark); border: 1.5px solid #d3ddf7; }
-  .btn-flip { background: #f3f4f6; color: #4b5563; }
   .btn-newsession-link {
     display: block;
     width: 100%;
@@ -361,15 +362,14 @@
       <div class="resume-info" id="resume-info"></div>
       <div class="resume-actions">
         <button class="btn-resume" id="btn-resume" type="button">Doorgaan</button>
-        <button class="btn-dismiss-resume" id="btn-dismiss-resume" type="button">Negeren</button>
-        <button class="btn-clear-progress" id="btn-clear-progress" type="button">Wis voortgang</button>
+        <button class="btn-dismiss-resume" id="btn-clear-progress" type="button">Nieuwe sessie</button>
       </div>
     </div>
     <label class="file-label" for="file-input">Kies lesbestand(en)</label>
+    <span class="hint-icon" tabindex="0" title="Tip: je browser onthoudt meestal de laatst gebruikte map. Navigeer de eerste keer handmatig naar de map met je lesbestanden (bv. fr/ of en/) — daarna opent de bestandskiezer daar vaak vanzelf weer.">?</span>
     <input type="file" id="file-input" accept=".yaml,.yml" multiple>
     <div class="file-list" id="file-list"></div>
     <div class="warning hidden" id="start-warning"></div>
-    <p class="hint">Tip: je browser onthoudt meestal de laatst gebruikte map. Navigeer de eerste keer handmatig naar de map met je lesbestanden (bv. <b>fr/</b> of <b>en/</b>) — daarna opent de bestandskiezer daar vaak vanzelf weer.</p>
     <div class="settings">
       <div class="setting-group">
         <div class="setting-label">Richting</div>
@@ -379,7 +379,7 @@
         </div>
       </div>
       <div class="setting-group">
-        <div class="setting-label">Geluid (automatisch voorlezen)</div>
+        <div class="setting-label">Automatisch voorlezen</div>
         <div class="setting-options">
           <label><input type="radio" name="sound-mode" value="off" checked> Uit</label>
           <label><input type="radio" name="sound-mode" value="foreign"> Vreemde taal</label>
@@ -441,7 +441,6 @@
       <div class="secondary-actions">
         <button class="btn-mistakes" id="btn-practice-mistakes">Oefen foute woorden</button>
         <button class="btn-all" id="btn-practice-all">Oefen alle woorden</button>
-        <button class="btn-flip" id="btn-flip-direction"></button>
       </div>
 
       <button class="btn-newsession-link" id="btn-new-session" type="button">Nieuwe sessie</button>
@@ -483,12 +482,10 @@
   const btnSmartPractice = document.getElementById("btn-smart-practice");
   const btnPracticeMistakes = document.getElementById("btn-practice-mistakes");
   const btnPracticeAll = document.getElementById("btn-practice-all");
-  const btnFlipDirection = document.getElementById("btn-flip-direction");
   const btnNewSession = document.getElementById("btn-new-session");
   const resumeBanner = document.getElementById("resume-banner");
   const resumeInfo = document.getElementById("resume-info");
   const btnResume = document.getElementById("btn-resume");
-  const btnDismissResume = document.getElementById("btn-dismiss-resume");
   const btnClearProgress = document.getElementById("btn-clear-progress");
 
   // ---------- State ----------
@@ -502,11 +499,17 @@
   let direction = "fwd";
   let soundMode = "off";
   let wordStats = new Map();
+  let lastKnownDirection = null; // laatst bekende richting - bij wijziging worden statistieken geleegd
 
   // ---------- Voortgang opslaan (localStorage) ----------
   const STORAGE_KEY = "woordjesleren:progress:v1";
   let storedMeta = {}; // { fileNames, lastRound } - aangevuld via persistState()
   let pendingResume = null; // gevulde staat uit localStorage, klaar om te hervatten
+
+  function setDirectionRadio(value) {
+    const el = document.querySelector(`input[name="direction"][value="${value}"]`);
+    if (el) el.checked = true;
+  }
 
   function itemKey(item) {
     return `${item.lang}|${item.word}|${item.nl}`;
@@ -530,6 +533,7 @@
       const data = {
         fileNames: storedMeta.fileNames || [],
         lastRound: storedMeta.lastRound || null,
+        direction: direction,
         words: combinedWords,
         sentences: combinedSentences,
         wordStats: Array.from(wordStats.entries()).map(([item, v]) => [itemKey(item), v]),
@@ -560,7 +564,6 @@
   }
 
   function clearProgress() {
-    if (!confirm("Alle opgeslagen leervoortgang wissen? Dit kan niet ongedaan worden gemaakt.")) return;
     clearStoredState();
     wordStats = new Map();
     storedMeta = {};
@@ -570,6 +573,10 @@
 
   function refreshResumeBanner() {
     const stored = loadStoredState();
+    if (stored && stored.direction) {
+      lastKnownDirection = stored.direction;
+      setDirectionRadio(stored.direction);
+    }
     if (!stored || stored.words.length + stored.sentences.length === 0) {
       pendingResume = null;
       resumeBanner.classList.add("hidden");
@@ -583,7 +590,7 @@
     const roundText = stored.lastRound
       ? `${stored.lastRound.score}/${stored.lastRound.total} goed, ${formatRelativeTime(stored.lastRound.at)}`
       : "nog niet geoefend";
-    resumeInfo.textContent = `Vorige sessie: ${fileText} — ${roundText}`;
+    resumeInfo.textContent = `${fileText} — ${roundText}`;
     resumeBanner.classList.remove("hidden");
   }
 
@@ -705,8 +712,8 @@
     }
 
     if (combinedWords.length + combinedSentences.length > 0) {
-      persistState({ fileNames: loadedNames });
-      startQuiz(combinedWords, combinedSentences);
+      persistState({ fileNames: loadedNames, lastRound: null });
+      refreshResumeBanner();
     }
   });
 
@@ -773,6 +780,12 @@
     skipped = 0;
     direction = directionOverride || getDirection();
     soundMode = getSoundMode();
+
+    if (lastKnownDirection !== null && direction !== lastKnownDirection) {
+      wordStats = new Map();
+      persistState();
+    }
+    lastKnownDirection = direction;
 
     screenStart.classList.add("hidden");
     screenEnd.classList.add("hidden");
@@ -980,12 +993,6 @@
 
     persistState({ lastRound: { score, total: answeredTotal, skipped, at: Date.now() } });
 
-    const lang = dominantForeignLang(playlist);
-    const flipped = direction === "fwd" ? "rev" : "fwd";
-    btnFlipDirection.textContent = flipped === "rev"
-      ? `Oefen woorden nl - ${lang}`
-      : `Oefen woorden ${lang} - nl`;
-
     renderHistogram();
     renderMistakes();
   }
@@ -1010,6 +1017,7 @@
         buckets[0] += 1;
         continue;
       }
+      if (!wordStats.has(item)) continue; // nooit beantwoord (bv. alleen overgeslagen) - niet meetellen
       const streak = Math.max(statFor(item), 1);
       buckets[Math.min(streak, 6)] += 1;
     }
@@ -1029,11 +1037,6 @@
         </div>`;
       })
       .join("")}</div>`;
-  }
-
-  function dominantForeignLang(items) {
-    const langs = new Set(items.map((i) => i.lang));
-    return langs.size === 1 ? [...langs][0] : "vreemde taal";
   }
 
   function appearProbability(item) {
@@ -1106,13 +1109,6 @@
     startQuiz(combinedWords, combinedSentences);
   });
 
-  btnFlipDirection.addEventListener("click", () => {
-    wordStats = new Map();
-    persistState();
-    const flipped = direction === "fwd" ? "rev" : "fwd";
-    beginSession(buildPlaylist(combinedWords, combinedSentences), flipped);
-  });
-
   btnSmartPractice.addEventListener("click", () => {
     beginSession(buildSmartPlaylist());
   });
@@ -1152,13 +1148,50 @@
     startQuiz(combinedWords, combinedSentences);
   });
 
-  btnDismissResume.addEventListener("click", () => {
-    resumeBanner.classList.add("hidden");
+  btnClearProgress.addEventListener("click", () => {
+    const resumeData = pendingResume;
+    clearProgress();
+
+    if (!resumeData || resumeData.words.length + resumeData.sentences.length === 0) {
+      refreshResumeBanner();
+      return;
+    }
+
+    combinedWords = resumeData.words;
+    combinedSentences = resumeData.sentences;
+    fileListEl.textContent = resumeData.fileNames && resumeData.fileNames.length
+      ? "Geladen: " + resumeData.fileNames.join(", ")
+      : "";
+    startQuiz(combinedWords, combinedSentences);
+    persistState({ fileNames: resumeData.fileNames });
   });
 
-  btnClearProgress.addEventListener("click", () => {
-    clearProgress();
-    refreshResumeBanner();
+  // Richting wijzigen op het startscherm wist meteen de statistieken van de vorige richting.
+  document.querySelectorAll('input[name="direction"]').forEach((el) => {
+    el.addEventListener("change", () => {
+      const newDirection = getDirection();
+      direction = newDirection;
+
+      if (combinedWords.length + combinedSentences.length > 0) {
+        wordStats = new Map();
+        persistState({ lastRound: null });
+      } else if (pendingResume) {
+        pendingResume = {
+          ...pendingResume,
+          wordStats: [],
+          lastRound: null,
+          direction: newDirection,
+        };
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(pendingResume));
+        } catch (err) {
+          // Opslag niet beschikbaar - negeren.
+        }
+      }
+
+      lastKnownDirection = newDirection;
+      refreshResumeBanner();
+    });
   });
 
   // ---------- Init ----------
