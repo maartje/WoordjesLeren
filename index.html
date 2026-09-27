@@ -377,7 +377,7 @@
       <div class="resume-info" id="resume-info"></div>
       <div class="resume-actions">
         <button class="btn-resume" id="btn-resume" type="button">Doorgaan</button>
-        <button class="btn-dismiss-resume" id="btn-clear-progress" type="button">Nieuwe sessie</button>
+        <button class="btn-dismiss-resume" id="btn-clear-progress" type="button">Start nieuwe sessie</button>
       </div>
     </div>
     <label class="file-label" for="file-input">Kies lesbestand(en)</label>
@@ -627,6 +627,7 @@
       ? `${stored.lastRound.score}/${stored.lastRound.total} goed, ${formatRelativeTime(stored.lastRound.at)}`
       : "nog niet geoefend";
     resumeInfo.textContent = `${fileText} — ${roundText}`;
+    btnResume.classList.toggle("hidden", !stored.lastRound);
     resumeBanner.classList.remove("hidden");
   }
 
