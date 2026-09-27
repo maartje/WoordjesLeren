@@ -182,18 +182,33 @@
   .end-actions {
     margin-top: 20px;
   }
+  .primary-cta-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
   .btn-primary-cta {
-    width: 100%;
+    width: auto;
+    flex: 1 1 auto;
     background: var(--accent);
     color: #fff;
     font-size: 1.05rem;
     padding: 16px;
   }
-  .end-primary-caption {
-    text-align: center;
-    font-size: 0.8rem;
+  .info-icon {
+    flex: 0 0 auto;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #e5e7eb;
     color: var(--muted);
-    margin: 6px 0 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: help;
+    user-select: none;
   }
   .secondary-actions {
     display: flex;
@@ -420,13 +435,13 @@
     <div class="skip-wrap">
       <button class="btn-skip" id="btn-skip" type="button">Sla over</button>
     </div>
+    <button class="btn-newsession-link" id="btn-new-session-quiz" type="button">Nieuwe sessie</button>
     <div class="feedback" id="feedback"></div>
     <button class="btn-next hidden" id="btn-next">Volgende &rarr;</button>
   </div>
 
   <!-- Eindscherm -->
   <div id="screen-end" class="hidden">
-    <h1>Klaar!</h1>
     <div class="score-line" id="final-score"></div>
     <div class="histogram" id="stats-histogram"></div>
     <div class="mistakes-header">
@@ -435,8 +450,10 @@
     </div>
     <div id="mistakes-list"></div>
     <div class="end-actions">
-      <button class="btn-primary-cta" id="btn-smart-practice" type="button">Slim oefenen</button>
-      <div class="end-primary-caption">Alle foute woorden plus selectie van woorden die minder vaak goed beantwoord zijn</div>
+      <div class="primary-cta-row">
+        <button class="btn-primary-cta" id="btn-smart-practice" type="button">Slim oefenen</button>
+        <span class="info-icon" tabindex="0" title="Alle foute woorden plus selectie van woorden die minder vaak goed beantwoord zijn">?</span>
+      </div>
 
       <div class="secondary-actions">
         <button class="btn-mistakes" id="btn-practice-mistakes">Oefen foute woorden</button>
@@ -483,6 +500,7 @@
   const btnPracticeMistakes = document.getElementById("btn-practice-mistakes");
   const btnPracticeAll = document.getElementById("btn-practice-all");
   const btnNewSession = document.getElementById("btn-new-session");
+  const btnNewSessionQuiz = document.getElementById("btn-new-session-quiz");
   const resumeBanner = document.getElementById("resume-banner");
   const resumeInfo = document.getElementById("resume-info");
   const btnResume = document.getElementById("btn-resume");
@@ -511,6 +529,16 @@
     if (el) el.checked = true;
   }
 
+  function setSoundModeRadio(value) {
+    const el = document.querySelector(`input[name="sound-mode"][value="${value}"]`);
+    if (el) el.checked = true;
+  }
+
+  function setOrderModeRadio(value) {
+    const el = document.querySelector(`input[name="order-mode"][value="${value}"]`);
+    if (el) el.checked = true;
+  }
+
   function itemKey(item) {
     return `${item.lang}|${item.word}|${item.nl}`;
   }
@@ -534,6 +562,8 @@
         fileNames: storedMeta.fileNames || [],
         lastRound: storedMeta.lastRound || null,
         direction: direction,
+        soundMode: getSoundMode(),
+        orderMode: getOrderMode(),
         words: combinedWords,
         sentences: combinedSentences,
         wordStats: Array.from(wordStats.entries()).map(([item, v]) => [itemKey(item), v]),
@@ -576,6 +606,12 @@
     if (stored && stored.direction) {
       lastKnownDirection = stored.direction;
       setDirectionRadio(stored.direction);
+    }
+    if (stored && stored.soundMode) {
+      setSoundModeRadio(stored.soundMode);
+    }
+    if (stored && stored.orderMode) {
+      setOrderModeRadio(stored.orderMode);
     }
     if (!stored || stored.words.length + stored.sentences.length === 0) {
       pendingResume = null;
@@ -1113,7 +1149,7 @@
     beginSession(buildSmartPlaylist());
   });
 
-  btnNewSession.addEventListener("click", () => {
+  function goToNewSession() {
     screenEnd.classList.add("hidden");
     screenQuiz.classList.add("hidden");
     screenStart.classList.remove("hidden");
@@ -1121,7 +1157,10 @@
     fileListEl.textContent = "";
     startWarning.classList.add("hidden");
     refreshResumeBanner();
-  });
+  }
+
+  btnNewSession.addEventListener("click", goToNewSession);
+  btnNewSessionQuiz.addEventListener("click", goToNewSession);
 
   // ---------- Vorige sessie hervatten ----------
   btnResume.addEventListener("click", () => {
