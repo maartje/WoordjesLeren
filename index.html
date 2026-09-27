@@ -201,6 +201,38 @@
     text-align: center;
     margin-bottom: 18px;
   }
+  .histogram {
+    margin: 4px 0 8px;
+  }
+  .histogram-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 6px;
+    height: 80px;
+  }
+  .histogram-col {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+  }
+  .histogram-count {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+  .histogram-bar {
+    width: 100%;
+    border-radius: 4px 4px 0 0;
+    min-height: 2px;
+  }
+  .histogram-label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-top: 4px;
+  }
   .mistakes-header {
     display: flex;
     align-items: center;
@@ -357,6 +389,7 @@
   <div id="screen-end" class="hidden">
     <h1>Klaar!</h1>
     <div class="score-line" id="final-score"></div>
+    <div class="histogram" id="stats-histogram"></div>
     <div class="mistakes-header">
       <div class="mistakes-title" id="mistakes-title"></div>
       <button class="btn-toggle-answers hidden" id="btn-toggle-answers">Toon antwoorden</button>
@@ -406,6 +439,7 @@
   const finalScoreEl = document.getElementById("final-score");
   const mistakesTitle = document.getElementById("mistakes-title");
   const mistakesList = document.getElementById("mistakes-list");
+  const histogramEl = document.getElementById("stats-histogram");
   const btnToggleAnswers = document.getElementById("btn-toggle-answers");
   const btnSmartPractice = document.getElementById("btn-smart-practice");
   const btnPracticeMistakes = document.getElementById("btn-practice-mistakes");
@@ -820,7 +854,49 @@
       ? `Oefen woorden nl - ${lang}`
       : `Oefen woorden ${lang} - nl`;
 
+    renderHistogram();
     renderMistakes();
+  }
+
+  const HISTOGRAM_COLORS = [
+    "var(--bad)",
+    "hsl(147, 55%, 88%)",
+    "hsl(147, 55%, 74%)",
+    "hsl(147, 55%, 60%)",
+    "hsl(147, 60%, 46%)",
+    "var(--good)",
+    "hsl(147, 70%, 24%)",
+  ];
+  const HISTOGRAM_LABELS = ["Fout", "1", "2", "3", "4", "5", ">5"];
+
+  function computeHistogramBuckets() {
+    const allItems = combinedWords.concat(combinedSentences);
+    const mistakeSet = new Set(mistakes);
+    const buckets = [0, 0, 0, 0, 0, 0, 0];
+    for (const item of allItems) {
+      if (mistakeSet.has(item)) {
+        buckets[0] += 1;
+        continue;
+      }
+      const streak = Math.max(statFor(item), 1);
+      buckets[Math.min(streak, 6)] += 1;
+    }
+    return buckets;
+  }
+
+  function renderHistogram() {
+    const buckets = computeHistogramBuckets();
+    const max = Math.max(...buckets, 1);
+    histogramEl.innerHTML = `<div class="histogram-bars">${buckets
+      .map((count, i) => {
+        const heightPct = (count / max) * 100;
+        return `<div class="histogram-col">
+          <div class="histogram-count">${count}</div>
+          <div class="histogram-bar" style="height:${heightPct}%; background:${HISTOGRAM_COLORS[i]};" title="${HISTOGRAM_LABELS[i]}: ${count}"></div>
+          <div class="histogram-label">${HISTOGRAM_LABELS[i]}</div>
+        </div>`;
+      })
+      .join("")}</div>`;
   }
 
   function dominantForeignLang(items) {
