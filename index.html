@@ -76,6 +76,37 @@
     font-size: 0.9rem;
     line-height: 1.4;
   }
+  .resume-banner {
+    margin-bottom: 20px;
+    background: #f0f3fb;
+    border: 1px solid #d3ddf7;
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .resume-info {
+    font-size: 0.9rem;
+    line-height: 1.4;
+    margin-bottom: 10px;
+  }
+  .resume-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .resume-actions button {
+    flex: 0 1 auto;
+    font-size: 0.85rem;
+    padding: 8px 14px;
+  }
+  .btn-resume { background: var(--accent); color: #fff; }
+  .btn-dismiss-resume { background: #fff; color: var(--accent-dark); border: 1.5px solid #d3ddf7; }
+  .btn-clear-progress {
+    background: none;
+    color: var(--muted);
+    text-decoration: underline;
+    padding: 8px 4px;
+  }
+  .btn-clear-progress:hover { background: none; filter: none; color: var(--bad); }
   .progress {
     color: var(--muted);
     font-size: 0.9rem;
@@ -326,6 +357,14 @@
   <div id="screen-start">
     <h1>Woordjes oefenen</h1>
     <p class="subtitle">Kies één of meerdere lesbestanden (.yaml) om jezelf te overhoren, van elke taal naar het Nederlands.</p>
+    <div class="resume-banner hidden" id="resume-banner">
+      <div class="resume-info" id="resume-info"></div>
+      <div class="resume-actions">
+        <button class="btn-resume" id="btn-resume" type="button">Doorgaan</button>
+        <button class="btn-dismiss-resume" id="btn-dismiss-resume" type="button">Negeren</button>
+        <button class="btn-clear-progress" id="btn-clear-progress" type="button">Wis voortgang</button>
+      </div>
+    </div>
     <label class="file-label" for="file-input">Kies lesbestand(en)</label>
     <input type="file" id="file-input" accept=".yaml,.yml" multiple>
     <div class="file-list" id="file-list"></div>
@@ -446,6 +485,11 @@
   const btnPracticeAll = document.getElementById("btn-practice-all");
   const btnFlipDirection = document.getElementById("btn-flip-direction");
   const btnNewSession = document.getElementById("btn-new-session");
+  const resumeBanner = document.getElementById("resume-banner");
+  const resumeInfo = document.getElementById("resume-info");
+  const btnResume = document.getElementById("btn-resume");
+  const btnDismissResume = document.getElementById("btn-dismiss-resume");
+  const btnClearProgress = document.getElementById("btn-clear-progress");
 
   // ---------- State ----------
   let playlist = [];
@@ -458,6 +502,90 @@
   let direction = "fwd";
   let soundMode = "off";
   let wordStats = new Map();
+
+  // ---------- Voortgang opslaan (localStorage) ----------
+  const STORAGE_KEY = "woordjesleren:progress:v1";
+  let storedMeta = {}; // { fileNames, lastRound } - aangevuld via persistState()
+  let pendingResume = null; // gevulde staat uit localStorage, klaar om te hervatten
+
+  function itemKey(item) {
+    return `${item.lang}|${item.word}|${item.nl}`;
+  }
+
+  function loadStoredState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      if (!data || !Array.isArray(data.words) || !Array.isArray(data.sentences)) return null;
+      return data;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function persistState(patch) {
+    try {
+      Object.assign(storedMeta, patch);
+      const data = {
+        fileNames: storedMeta.fileNames || [],
+        lastRound: storedMeta.lastRound || null,
+        words: combinedWords,
+        sentences: combinedSentences,
+        wordStats: Array.from(wordStats.entries()).map(([item, v]) => [itemKey(item), v]),
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch (err) {
+      // Opslag niet beschikbaar (privémodus, quota) - app werkt gewoon verder zonder persistentie.
+    }
+  }
+
+  function clearStoredState() {
+    try {
+      localStorage.removeItem(STORAGE_KEY);
+    } catch (err) {
+      // niets te doen
+    }
+  }
+
+  function formatRelativeTime(timestamp) {
+    const diffMs = Date.now() - timestamp;
+    const minutes = Math.round(diffMs / 60000);
+    if (minutes < 1) return "zojuist";
+    if (minutes < 60) return `${minutes} min geleden`;
+    const hours = Math.round(minutes / 60);
+    if (hours < 24) return `${hours} uur geleden`;
+    const days = Math.round(hours / 24);
+    return `${days} dag${days === 1 ? "" : "en"} geleden`;
+  }
+
+  function clearProgress() {
+    if (!confirm("Alle opgeslagen leervoortgang wissen? Dit kan niet ongedaan worden gemaakt.")) return;
+    clearStoredState();
+    wordStats = new Map();
+    storedMeta = {};
+    pendingResume = null;
+    resumeBanner.classList.add("hidden");
+  }
+
+  function refreshResumeBanner() {
+    const stored = loadStoredState();
+    if (!stored || stored.words.length + stored.sentences.length === 0) {
+      pendingResume = null;
+      resumeBanner.classList.add("hidden");
+      return;
+    }
+
+    pendingResume = stored;
+    const fileText = stored.fileNames && stored.fileNames.length
+      ? stored.fileNames.join(", ")
+      : "eerdere lesbestanden";
+    const roundText = stored.lastRound
+      ? `${stored.lastRound.score}/${stored.lastRound.total} goed, ${formatRelativeTime(stored.lastRound.at)}`
+      : "nog niet geoefend";
+    resumeInfo.textContent = `Vorige sessie: ${fileText} — ${roundText}`;
+    resumeBanner.classList.remove("hidden");
+  }
 
   // ---------- Tiny YAML parser (tailored to the lesson file format) ----------
   // Expected shape (taal-key is vrij, bepaalt de taal van het lesbestand):
@@ -577,6 +705,7 @@
     }
 
     if (combinedWords.length + combinedSentences.length > 0) {
+      persistState({ fileNames: loadedNames });
       startQuiz(combinedWords, combinedSentences);
     }
   });
@@ -752,6 +881,7 @@
 
   function recordStat(item, correct) {
     wordStats.set(item, correct ? statFor(item) + 1 : Math.floor(statFor(item) / 2));
+    persistState();
   }
 
   function handleResult(correct) {
@@ -847,6 +977,8 @@
       ? `Score: ${score} / ${answeredTotal} (${skipped} overgeslagen)`
       : `Score: ${score} / ${answeredTotal}`;
     btnPracticeMistakes.disabled = mistakes.length === 0;
+
+    persistState({ lastRound: { score, total: answeredTotal, skipped, at: Date.now() } });
 
     const lang = dominantForeignLang(playlist);
     const flipped = direction === "fwd" ? "rev" : "fwd";
@@ -976,6 +1108,7 @@
 
   btnFlipDirection.addEventListener("click", () => {
     wordStats = new Map();
+    persistState();
     const flipped = direction === "fwd" ? "rev" : "fwd";
     beginSession(buildPlaylist(combinedWords, combinedSentences), flipped);
   });
@@ -991,7 +1124,45 @@
     fileInput.value = "";
     fileListEl.textContent = "";
     startWarning.classList.add("hidden");
+    refreshResumeBanner();
   });
+
+  // ---------- Vorige sessie hervatten ----------
+  btnResume.addEventListener("click", () => {
+    if (!pendingResume) return;
+    combinedWords = pendingResume.words;
+    combinedSentences = pendingResume.sentences;
+
+    const lookup = new Map();
+    for (const item of combinedWords.concat(combinedSentences)) {
+      lookup.set(itemKey(item), item);
+    }
+    wordStats = new Map();
+    for (const [key, value] of pendingResume.wordStats || []) {
+      const item = lookup.get(key);
+      if (item) wordStats.set(item, value);
+    }
+
+    storedMeta = { fileNames: pendingResume.fileNames, lastRound: pendingResume.lastRound };
+    fileListEl.textContent = pendingResume.fileNames && pendingResume.fileNames.length
+      ? "Geladen: " + pendingResume.fileNames.join(", ")
+      : "";
+    resumeBanner.classList.add("hidden");
+
+    startQuiz(combinedWords, combinedSentences);
+  });
+
+  btnDismissResume.addEventListener("click", () => {
+    resumeBanner.classList.add("hidden");
+  });
+
+  btnClearProgress.addEventListener("click", () => {
+    clearProgress();
+    refreshResumeBanner();
+  });
+
+  // ---------- Init ----------
+  refreshResumeBanner();
 })();
 </script>
 
