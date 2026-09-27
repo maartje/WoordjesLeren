@@ -364,7 +364,7 @@
     <div id="mistakes-list"></div>
     <div class="end-actions">
       <button class="btn-primary-cta" id="btn-smart-practice" type="button">Slim oefenen</button>
-      <div class="end-primary-caption">Kiest een mix van je foute en minder zekere woorden</div>
+      <div class="end-primary-caption">Alle foute woorden plus selectie van woorden die minder vaak goed beantwoord zijn</div>
 
       <div class="secondary-actions">
         <button class="btn-mistakes" id="btn-practice-mistakes">Oefen foute woorden</button>
@@ -713,14 +713,11 @@
   }
 
   function statFor(item) {
-    return wordStats.get(item) || { good: 0, bad: 0 };
+    return wordStats.get(item) || 0;
   }
 
   function recordStat(item, correct) {
-    const stat = statFor(item);
-    if (correct) stat.good += 1;
-    else stat.bad += 1;
-    wordStats.set(item, stat);
+    wordStats.set(item, correct ? statFor(item) + 1 : Math.floor(statFor(item) / 2));
   }
 
   function handleResult(correct) {
@@ -832,8 +829,7 @@
   }
 
   function appearProbability(item) {
-    const stat = statFor(item);
-    return Math.max((stat.bad + 1) / (stat.good + stat.bad + 1), 0.1);
+    return Math.max(0.5 ** statFor(item), 0.05);
   }
 
   function buildSmartPlaylist() {
@@ -866,12 +862,6 @@
     return getOrderMode() === "original" ? selected : shuffle(selected);
   }
 
-  function formatMistakeStat(item) {
-    const stat = statFor(item);
-    const total = stat.good + stat.bad;
-    return `${stat.bad}<span class="mistake-cross">&#10007;</span> / ${total}`;
-  }
-
   function renderMistakes() {
     if (mistakes.length === 0) {
       mistakesTitle.textContent = "";
@@ -888,7 +878,7 @@
       .map((m) => {
         const nlPart = answersRevealed
           ? `<span class="mistake-nl">${escapeHtml(m.nl)}</span>`
-          : `<span class="mistake-nl">${formatMistakeStat(m)}</span>`;
+          : "";
         return `<div class="mistake-row"><span class="mistake-fr-wrap"><span class="mistake-cross">&#10007;</span><span class="mistake-fr">${escapeHtml(m.word)}</span></span>${nlPart}</div>`;
       })
       .join("");
