@@ -339,6 +339,27 @@
     font-size: 0.9rem;
     color: var(--muted);
   }
+  .loaded-file-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+  }
+  .btn-remove-file {
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border-radius: 50%;
+    background: var(--bad-bg);
+    color: var(--bad);
+    font-weight: 700;
+    line-height: 1;
+    font-size: 0.85rem;
+  }
+  .loaded-file-name {
+    color: var(--text);
+  }
   .settings {
     margin-top: 20px;
     display: flex;
@@ -372,7 +393,7 @@
   <!-- Startscherm: bestand(en) kiezen -->
   <div id="screen-start">
     <h1>Woordjes oefenen</h1>
-    <p class="subtitle">Kies één of meerdere lesbestanden (.yaml) om jezelf te overhoren, van elke taal naar het Nederlands.</p>
+    <p class="subtitle">Kies één of meerdere lesbestanden (.yaml) om woorden te oefenen, van elke vreemde taal naar het Nederlands en andersom.</p>
     <div class="resume-banner hidden" id="resume-banner">
       <div class="resume-info" id="resume-info"></div>
       <div class="resume-actions">
@@ -380,7 +401,7 @@
         <button class="btn-dismiss-resume" id="btn-clear-progress" type="button">Start nieuwe sessie</button>
       </div>
     </div>
-    <label class="file-label" for="file-input">Kies lesbestand(en)</label>
+    <label class="file-label" for="file-input" id="file-label">Kies lesbestand(en)</label>
     <span class="hint-icon" tabindex="0" title="Tip: je browser onthoudt meestal de laatst gebruikte map. Navigeer de eerste keer handmatig naar de map met je lesbestanden (bv. fr/ of en/) — daarna opent de bestandskiezer daar vaak vanzelf weer.">?</span>
     <input type="file" id="file-input" accept=".yaml,.yml" multiple>
     <div class="file-list" id="file-list"></div>
@@ -476,6 +497,7 @@
   const screenEnd = document.getElementById("screen-end");
 
   const fileInput = document.getElementById("file-input");
+  const fileLabelEl = document.getElementById("file-label");
   const fileListEl = document.getElementById("file-list");
   const startWarning = document.getElementById("start-warning");
 
@@ -516,8 +538,7 @@
   let answersRevealed = false;
   let direction = "fwd";
   let soundMode = "off";
-  let wordStats = new Map();
-  let lastKnownDirection = null; // laatst bekende richting - bij wijziging worden statistieken geleegd
+  let wordStats = new Map(); // item -> { fwd, rev } streaks, per richting
 
   // ---------- Voortgang opslaan (localStorage) ----------
   const STORAGE_KEY = "woordjesleren:progress:v1";
@@ -543,6 +564,42 @@
     return `${item.lang}|${item.word}|${item.nl}`;
   }
 
+  function tagLegacyItemsWithSingleFile(items, fileNames) {
+    if (!fileNames || fileNames.length !== 1) return;
+    const onlyName = fileNames[0];
+    for (const item of items) {
+      if (!item.file) item.file = onlyName;
+    }
+  }
+
+  function normalizeLastRound(raw) {
+    if (raw && typeof raw === "object" && ("fwd" in raw || "rev" in raw)) {
+      return { fwd: raw.fwd || null, rev: raw.rev || null };
+    }
+    return { fwd: null, rev: null };
+  }
+
+  function rebuildWordStats(items, entries) {
+    const lookup = new Map();
+    for (const item of items) lookup.set(itemKey(item), item);
+    const map = new Map();
+    for (const entry of entries || []) {
+      if (entry.length < 3) continue; // oud formaat (los getal) - statistieken resetten
+      const [key, fwd, rev] = entry;
+      const item = lookup.get(key);
+      if (item) map.set(item, { fwd: fwd || 0, rev: rev || 0 });
+    }
+    return map;
+  }
+
+  function resetCurrentDirectionStats() {
+    for (const [item, entry] of wordStats.entries()) {
+      delete entry[direction];
+      if (!entry.fwd && !entry.rev) wordStats.delete(item);
+    }
+    storedMeta.lastRound = { ...normalizeLastRound(storedMeta.lastRound), [direction]: null };
+  }
+
   function loadStoredState() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
@@ -560,25 +617,17 @@
       Object.assign(storedMeta, patch);
       const data = {
         fileNames: storedMeta.fileNames || [],
-        lastRound: storedMeta.lastRound || null,
+        lastRound: normalizeLastRound(storedMeta.lastRound),
         direction: direction,
         soundMode: getSoundMode(),
         orderMode: getOrderMode(),
         words: combinedWords,
         sentences: combinedSentences,
-        wordStats: Array.from(wordStats.entries()).map(([item, v]) => [itemKey(item), v]),
+        wordStats: Array.from(wordStats.entries()).map(([item, v]) => [itemKey(item), v.fwd || 0, v.rev || 0]),
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     } catch (err) {
       // Opslag niet beschikbaar (privémodus, quota) - app werkt gewoon verder zonder persistentie.
-    }
-  }
-
-  function clearStoredState() {
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch (err) {
-      // niets te doen
     }
   }
 
@@ -593,18 +642,9 @@
     return `${days} dag${days === 1 ? "" : "en"} geleden`;
   }
 
-  function clearProgress() {
-    clearStoredState();
-    wordStats = new Map();
-    storedMeta = {};
-    pendingResume = null;
-    resumeBanner.classList.add("hidden");
-  }
-
   function refreshResumeBanner() {
     const stored = loadStoredState();
     if (stored && stored.direction) {
-      lastKnownDirection = stored.direction;
       setDirectionRadio(stored.direction);
     }
     if (stored && stored.soundMode) {
@@ -623,11 +663,13 @@
     const fileText = stored.fileNames && stored.fileNames.length
       ? stored.fileNames.join(", ")
       : "eerdere lesbestanden";
-    const roundText = stored.lastRound
-      ? `${stored.lastRound.score}/${stored.lastRound.total} goed, ${formatRelativeTime(stored.lastRound.at)}`
+    const roundForDirection = normalizeLastRound(stored.lastRound)[getDirection()];
+    const hasProgress = Array.isArray(stored.wordStats) && stored.wordStats.length > 0;
+    const roundText = roundForDirection
+      ? `${roundForDirection.score}/${roundForDirection.total} goed, ${formatRelativeTime(roundForDirection.at)}`
       : "nog niet geoefend";
     resumeInfo.textContent = `${fileText} — ${roundText}`;
-    btnResume.classList.toggle("hidden", !stored.lastRound);
+    btnResume.classList.toggle("hidden", !roundForDirection && !hasProgress);
     resumeBanner.classList.remove("hidden");
   }
 
@@ -711,17 +753,51 @@
   let combinedWords = [];
   let combinedSentences = [];
 
+  function renderFileList() {
+    const names = storedMeta.fileNames || [];
+    fileLabelEl.textContent = names.length ? "Voeg lesbestand(en) toe" : "Kies lesbestand(en)";
+    fileListEl.innerHTML = names
+      .map((name) => `<div class="loaded-file-row" data-file="${escapeHtml(name)}">
+        <button class="btn-remove-file" type="button" aria-label="Verwijder ${escapeHtml(name)}">&times;</button>
+        <span class="loaded-file-name">${escapeHtml(name)}</span>
+      </div>`)
+      .join("");
+  }
+
+  function removeFile(fileName) {
+    const keep = (item) => {
+      if (item.file !== fileName) return true;
+      wordStats.delete(item);
+      return false;
+    };
+    combinedWords = combinedWords.filter(keep);
+    combinedSentences = combinedSentences.filter(keep);
+    storedMeta.fileNames = (storedMeta.fileNames || []).filter((n) => n !== fileName);
+    renderFileList();
+    persistState({ fileNames: storedMeta.fileNames, lastRound: { fwd: null, rev: null } });
+    refreshResumeBanner();
+  }
+
+  fileListEl.addEventListener("click", (e) => {
+    const btn = e.target.closest(".btn-remove-file");
+    if (!btn) return;
+    const row = btn.closest(".loaded-file-row");
+    if (row) removeFile(row.dataset.file);
+  });
+
   fileInput.addEventListener("change", async () => {
     const files = Array.from(fileInput.files || []);
     if (files.length === 0) return;
 
-    wordStats = new Map();
-    combinedWords = [];
-    combinedSentences = [];
     const warnings = [];
-    const loadedNames = [];
+    const addedNames = [];
+    const existingNames = new Set(storedMeta.fileNames || []);
 
     for (const file of files) {
+      if (existingNames.has(file.name)) {
+        warnings.push(`"${file.name}" is al geladen en wordt overgeslagen.`);
+        continue;
+      }
       try {
         const text = await file.text();
         const data = parseLessonYaml(text);
@@ -729,17 +805,18 @@
           warnings.push(`"${file.name}" heeft niet het verwachte formaat en is overgeslagen.`);
           continue;
         }
+        data.words.forEach((w) => { w.file = file.name; });
+        data.sentences.forEach((s) => { s.file = file.name; });
         combinedWords = combinedWords.concat(data.words);
         combinedSentences = combinedSentences.concat(data.sentences);
-        loadedNames.push(file.name);
+        existingNames.add(file.name);
+        addedNames.push(file.name);
       } catch (err) {
         warnings.push(`"${file.name}" kon niet gelezen worden en is overgeslagen.`);
       }
     }
 
-    fileListEl.textContent = loadedNames.length
-      ? "Geladen: " + loadedNames.join(", ")
-      : "";
+    fileInput.value = "";
 
     if (warnings.length) {
       startWarning.textContent = warnings.join(" ");
@@ -748,8 +825,10 @@
       startWarning.classList.add("hidden");
     }
 
-    if (combinedWords.length + combinedSentences.length > 0) {
-      persistState({ fileNames: loadedNames, lastRound: null });
+    if (addedNames.length) {
+      const fileNames = (storedMeta.fileNames || []).concat(addedNames);
+      persistState({ fileNames, lastRound: { fwd: null, rev: null } });
+      renderFileList();
       refreshResumeBanner();
     }
   });
@@ -817,12 +896,6 @@
     skipped = 0;
     direction = directionOverride || getDirection();
     soundMode = getSoundMode();
-
-    if (lastKnownDirection !== null && direction !== lastKnownDirection) {
-      wordStats = new Map();
-      persistState();
-    }
-    lastKnownDirection = direction;
 
     screenStart.classList.add("hidden");
     screenEnd.classList.add("hidden");
@@ -925,12 +998,15 @@
     btnNext.focus();
   }
 
-  function statFor(item) {
-    return wordStats.get(item) || 0;
+  function statFor(item, dir = direction) {
+    return (wordStats.get(item) || {})[dir] || 0;
   }
 
   function recordStat(item, correct) {
-    wordStats.set(item, correct ? statFor(item) + 1 : Math.floor(statFor(item) / 2));
+    const entry = wordStats.get(item) || { fwd: 0, rev: 0 };
+    const current = entry[direction] || 0;
+    entry[direction] = correct ? current + 1 : Math.floor(current / 2);
+    wordStats.set(item, entry);
     persistState();
   }
 
@@ -1028,7 +1104,10 @@
       : `Score: ${score} / ${answeredTotal}`;
     btnPracticeMistakes.disabled = mistakes.length === 0;
 
-    persistState({ lastRound: { score, total: answeredTotal, skipped, at: Date.now() } });
+    const prevLastRound = normalizeLastRound(storedMeta.lastRound);
+    persistState({
+      lastRound: { ...prevLastRound, [direction]: { score, total: answeredTotal, skipped, at: Date.now() } },
+    });
 
     renderHistogram();
     renderMistakes();
@@ -1155,7 +1234,7 @@
     screenQuiz.classList.add("hidden");
     screenStart.classList.remove("hidden");
     fileInput.value = "";
-    fileListEl.textContent = "";
+    renderFileList();
     startWarning.classList.add("hidden");
     refreshResumeBanner();
   }
@@ -1168,60 +1247,54 @@
     if (!pendingResume) return;
     combinedWords = pendingResume.words;
     combinedSentences = pendingResume.sentences;
+    tagLegacyItemsWithSingleFile(combinedWords.concat(combinedSentences), pendingResume.fileNames);
+    wordStats = rebuildWordStats(combinedWords.concat(combinedSentences), pendingResume.wordStats);
 
-    const lookup = new Map();
-    for (const item of combinedWords.concat(combinedSentences)) {
-      lookup.set(itemKey(item), item);
-    }
-    wordStats = new Map();
-    for (const [key, value] of pendingResume.wordStats || []) {
-      const item = lookup.get(key);
-      if (item) wordStats.set(item, value);
-    }
-
-    storedMeta = { fileNames: pendingResume.fileNames, lastRound: pendingResume.lastRound };
-    fileListEl.textContent = pendingResume.fileNames && pendingResume.fileNames.length
-      ? "Geladen: " + pendingResume.fileNames.join(", ")
-      : "";
+    storedMeta = { fileNames: pendingResume.fileNames, lastRound: normalizeLastRound(pendingResume.lastRound) };
+    renderFileList();
     resumeBanner.classList.add("hidden");
 
     startQuiz(combinedWords, combinedSentences);
   });
 
+  // "Start nieuwe sessie" reset alleen de statistieken van de huidige richting; de andere richting blijft bewaard.
   btnClearProgress.addEventListener("click", () => {
     const resumeData = pendingResume;
-    clearProgress();
+    const alreadyLoaded = combinedWords.length + combinedSentences.length > 0;
 
-    if (!resumeData || resumeData.words.length + resumeData.sentences.length === 0) {
-      refreshResumeBanner();
-      return;
+    if (!alreadyLoaded) {
+      if (!resumeData || resumeData.words.length + resumeData.sentences.length === 0) {
+        pendingResume = null;
+        resumeBanner.classList.add("hidden");
+        refreshResumeBanner();
+        return;
+      }
+      combinedWords = resumeData.words;
+      combinedSentences = resumeData.sentences;
+      tagLegacyItemsWithSingleFile(combinedWords.concat(combinedSentences), resumeData.fileNames);
+      wordStats = rebuildWordStats(combinedWords.concat(combinedSentences), resumeData.wordStats);
+      storedMeta = { fileNames: resumeData.fileNames, lastRound: normalizeLastRound(resumeData.lastRound) };
+      renderFileList();
     }
 
-    combinedWords = resumeData.words;
-    combinedSentences = resumeData.sentences;
-    fileListEl.textContent = resumeData.fileNames && resumeData.fileNames.length
-      ? "Geladen: " + resumeData.fileNames.join(", ")
-      : "";
+    direction = getDirection();
+    resetCurrentDirectionStats();
+    pendingResume = null;
+    resumeBanner.classList.add("hidden");
+
     startQuiz(combinedWords, combinedSentences);
-    persistState({ fileNames: resumeData.fileNames });
+    persistState({ fileNames: storedMeta.fileNames });
   });
 
-  // Richting wijzigen op het startscherm wist meteen de statistieken van de vorige richting.
+  // Richting wijzigen laadt de statistieken van die richting (elke richting heeft zijn eigen statistieken).
   document.querySelectorAll('input[name="direction"]').forEach((el) => {
     el.addEventListener("change", () => {
-      const newDirection = getDirection();
-      direction = newDirection;
+      direction = getDirection();
 
       if (combinedWords.length + combinedSentences.length > 0) {
-        wordStats = new Map();
-        persistState({ lastRound: null });
+        persistState();
       } else if (pendingResume) {
-        pendingResume = {
-          ...pendingResume,
-          wordStats: [],
-          lastRound: null,
-          direction: newDirection,
-        };
+        pendingResume = { ...pendingResume, direction };
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(pendingResume));
         } catch (err) {
@@ -1229,7 +1302,6 @@
         }
       }
 
-      lastKnownDirection = newDirection;
       refreshResumeBanner();
     });
   });
