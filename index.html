@@ -473,7 +473,7 @@
     <div class="end-actions">
       <div class="primary-cta-row">
         <button class="btn-primary-cta" id="btn-smart-practice" type="button">Slim oefenen</button>
-        <span class="info-icon" tabindex="0" title="Alle foute woorden plus selectie van woorden die minder vaak goed beantwoord zijn">?</span>
+        <span class="info-icon" tabindex="0" title="Korte ronde van maximaal 30 woorden: al je foute woorden, aangevuld met woorden die je minder vaak goed had. Nooit meer geleerde dan ongeleerde woorden.">?</span>
       </div>
 
       <div class="secondary-actions">
@@ -1155,6 +1155,12 @@
       .join("")}</div>`;
   }
 
+  // Slim oefenen: boven deze streak geldt een woord als geleerd (zelfde grens als de histogram-bucket ">5").
+  const SMART_MASTERED_STREAK = 5;
+  const SMART_MIN_ITEMS = 5;
+  const SMART_MAX_ITEMS = 30;
+  const SMART_REFRESH_SLOTS = 5; // plekken die geleerde woorden houden, ook als er veel ongeleerde woorden zijn
+
   function appearProbability(item) {
     return Math.max(0.5 ** statFor(item), 0.05);
   }
@@ -1162,30 +1168,71 @@
   function buildSmartPlaylist() {
     const allItems = combinedWords.concat(combinedSentences);
     const total = allItems.length;
-    const minTarget = Math.min(total, total < 5 ? Math.ceil(total / 2) : 5);
+    if (total === 0) return [];
 
-    const included = new Set(mistakes);
+    const minTarget = Math.min(SMART_MIN_ITEMS, Math.ceil(total / 2));
+    const mistakeSet = new Set(mistakes);
+    // Net fout beantwoord telt altijd als "nog niet geleerd", ook bij een hoge streak.
+    const isMastered = (item) => !mistakeSet.has(item) && statFor(item) > SMART_MASTERED_STREAK;
+
+    const drawnWeak = [];
+    const drawnMastered = [];
     const leftover = [];
 
-    for (const item of allItems) {
-      if (included.has(item)) continue;
+    // Vooraf shuffelen: geleerde woorden hebben allemaal dezelfde kans, dus afkappen mag niet op deckvolgorde gaan.
+    for (const item of shuffle(allItems)) {
+      if (mistakeSet.has(item)) continue;
       const p = appearProbability(item);
-      if (Math.random() < p) {
-        included.add(item);
-      } else {
-        leftover.push({ item, p });
+      if (Math.random() >= p) leftover.push(item);
+      else if (isMastered(item)) drawnMastered.push(item);
+      else drawnWeak.push(item);
+    }
+
+    // Foute woorden gaan altijd mee, ook boven het maximum.
+    const chosen = new Set(mistakes);
+    let weakCount = chosen.size;
+
+    // Laagste streak eerst; gelijke streaks staan al willekeurig door de shuffle hierboven.
+    drawnWeak.sort((a, b) => statFor(a) - statFor(b));
+
+    const capacity = Math.max(0, SMART_MAX_ITEMS - chosen.size);
+    const reserved = Math.min(SMART_REFRESH_SLOTS, drawnMastered.length, capacity);
+    let taken = 0;
+    for (const item of drawnWeak) {
+      if (taken >= capacity - reserved) break;
+      chosen.add(item);
+      weakCount += 1;
+      taken += 1;
+    }
+
+    // Nooit meer geleerde dan gekozen ongeleerde woorden, en nooit meer dan het maximum.
+    const masteredRoom = Math.min(
+      drawnMastered.length,
+      Math.max(0, SMART_MAX_ITEMS - chosen.size),
+      weakCount
+    );
+    for (const item of drawnMastered.slice(0, masteredRoom)) chosen.add(item);
+
+    // Ruimte die de geleerde woorden niet gebruiken gaat terug naar de ongeleerde woorden.
+    for (const item of drawnWeak.slice(taken)) {
+      if (chosen.size >= SMART_MAX_ITEMS) break;
+      chosen.add(item);
+    }
+
+    // Te kleine ronde: eerst ongeleerde woorden (laagste streak eerst), daarna willekeurig geleerde.
+    // Alleen hier mag de verhoudingsregel wijken, namelijk als er te weinig ongeleerde woorden zijn.
+    if (chosen.size < minTarget) {
+      const fillWeak = [];
+      const fillMastered = drawnMastered.slice(masteredRoom);
+      for (const item of leftover) (isMastered(item) ? fillMastered : fillWeak).push(item);
+      fillWeak.sort((a, b) => statFor(a) - statFor(b));
+      for (const item of fillWeak.concat(fillMastered)) {
+        if (chosen.size >= minTarget) break;
+        chosen.add(item);
       }
     }
 
-    if (included.size < minTarget) {
-      leftover.sort((a, b) => b.p - a.p);
-      for (const { item } of leftover) {
-        if (included.size >= minTarget) break;
-        included.add(item);
-      }
-    }
-
-    const selected = Array.from(included);
+    const selected = allItems.filter((item) => chosen.has(item));
     return getOrderMode() === "original" ? selected : shuffle(selected);
   }
 
