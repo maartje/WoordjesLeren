@@ -267,7 +267,7 @@
   }
   .btn-mistakes { background: #e7edfc; color: var(--accent-dark); }
   .btn-all { background: #fff; color: var(--accent-dark); border: 1.5px solid #d3ddf7; }
-  .btn-newsession-link {
+  .btn-tostart-link {
     display: block;
     width: 100%;
     background: none;
@@ -279,7 +279,7 @@
     margin-top: 18px;
     text-align: center;
   }
-  .btn-newsession-link:hover { background: none; filter: none; color: var(--text); }
+  .btn-tostart-link:hover { background: none; filter: none; color: var(--text); }
   .feedback {
     margin-top: 18px;
     padding: 14px 16px;
@@ -295,24 +295,35 @@
     font-size: 1.3rem;
     font-weight: 700;
     text-align: center;
+    margin-bottom: 2px;
+  }
+  .score-sub {
+    font-size: 0.8rem;
+    color: var(--muted);
+    text-align: center;
     margin-bottom: 18px;
   }
   .histogram {
     margin: 4px 0 8px;
   }
   .histogram-bars {
+    --label-space: 32px; /* genoeg voor een label van twee regels */
     display: flex;
     align-items: flex-end;
     gap: 6px;
-    height: 80px;
+    height: 112px;
   }
+  /* Het label staat in de onderste padding, buiten de flow: een label van twee regels
+     ('Over-geslagen') zou de balk anders omhoog duwen ten opzichte van de rest. */
   .histogram-col {
+    position: relative;
     flex: 1 1 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: flex-end;
     height: 100%;
+    padding-bottom: var(--label-space);
   }
   .histogram-count {
     font-size: 0.75rem;
@@ -333,9 +344,13 @@
     width: 100%;
   }
   .histogram-label {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
     font-size: 0.75rem;
     color: var(--muted);
-    margin-top: 4px;
+    padding-top: 4px;
     text-align: center;
     line-height: 1.2;
   }
@@ -481,7 +496,7 @@
       </div>
     </div>
     <label class="file-label" for="file-input" id="file-label">Kies lesbestand(en)</label>
-    <span class="hint-icon" tabindex="0" title="Tip: je browser onthoudt meestal de laatst gebruikte map. Navigeer de eerste keer handmatig naar de map met je lesbestanden (bv. fr/ of en/) — daarna opent de bestandskiezer daar vaak vanzelf weer.">?</span>
+    <span class="hint-icon" tabindex="0" title="Selecteer een of meer lesbestanden in .yaml formaat">?</span>
     <input type="file" id="file-input" accept=".yaml,.yml" multiple>
     <div class="file-list" id="file-list"></div>
     <div class="warning hidden" id="start-warning"></div>
@@ -509,7 +524,7 @@
         </div>
       </div>
       <div class="smart-settings" id="smart-settings">
-        <div class="smart-settings-title">Alleen voor &ldquo;Slim oefenen&rdquo;<span class="hint-icon" tabindex="0" title="Deze twee instellingen bepalen alleen hoe &ldquo;Slim oefenen&rdquo; zijn ronde samenstelt. &ldquo;Oefen alle woorden&rdquo; neemt altijd het hele deck, en een foutenronde altijd alle woorden die nog fout staan.">?</span></div>
+        <div class="smart-settings-title">Instellingen voor &ldquo;Slim oefenen&rdquo;<span class="hint-icon" tabindex="0" title="Deze twee instellingen bepalen alleen hoe &ldquo;Slim oefenen&rdquo; zijn ronde samenstelt. &ldquo;Oefen alle woorden&rdquo; neemt altijd het hele deck, en een foutenronde altijd alle woorden die nog fout staan.">?</span></div>
         <div class="setting-group">
           <div class="setting-label">Maximaal aantal woorden per ronde</div>
           <div class="setting-options">
@@ -556,7 +571,7 @@
     <div class="skip-wrap">
       <button class="btn-skip" id="btn-skip" type="button">Sla over</button>
     </div>
-    <button class="btn-newsession-link" id="btn-new-session-quiz" type="button">Nieuwe sessie</button>
+    <button class="btn-tostart-link" id="btn-to-start-quiz" type="button">Naar startscherm</button>
     <div class="feedback" id="feedback"></div>
     <div class="answer-actions hidden" id="answer-actions">
       <button class="btn-wrong-after-all" id="btn-wrong-after-all" type="button">Toch fout</button>
@@ -568,6 +583,7 @@
   <!-- Eindscherm -->
   <div id="screen-end" class="hidden">
     <div class="score-line" id="final-score"></div>
+    <div class="score-sub" id="final-score-sub"></div>
     <div class="histogram" id="stats-histogram"></div>
     <div class="mistakes-header">
       <div class="mistakes-title" id="mistakes-title"></div>
@@ -578,7 +594,7 @@
     <div class="end-actions">
       <div class="primary-cta-row">
         <button class="btn-primary-cta" id="btn-smart-practice" type="button">Slim oefenen</button>
-        <span class="info-icon" tabindex="0" title="Korte ronde. Woorden die je nog nooit gezien hebt gaan altijd allemaal mee, bijvoorbeeld na het toevoegen van een lesbestand. Daarnaast het ingestelde aantal foute/overgeslagen woorden: dat getal is het plafond voor foute woorden én voor foute + overgeslagen samen, dus staan er al zoveel woorden fout, dan komt er geen overgeslagen woord bij. De rest van de ronde wordt aangevuld met woorden die volgens de planning weer aan de beurt zijn; hoe vaker je een woord goed hebt, hoe langer het wegblijft. Woorden die op 'niet meer oefenen' staan blijven buiten de ronde.">?</span>
+        <span class="info-icon" tabindex="0" title="Toont het ingestelde aantal foute/overgeslagen woorden, aangevuld met goede woorden die volgens het schema weer aan de beurt zijn. Hoe vaker je een woord goed hebt, hoe langer het wegblijft. Woorden die op 'niet meer oefenen' staan worden niet meer getoond.">?</span>
       </div>
 
       <div class="secondary-actions">
@@ -586,7 +602,7 @@
         <button class="btn-all" id="btn-practice-all">Oefen alle woorden</button>
       </div>
 
-      <button class="btn-newsession-link" id="btn-new-session" type="button">Nieuwe sessie</button>
+      <button class="btn-tostart-link" id="btn-to-start" type="button">Naar startscherm</button>
     </div>
   </div>
 
@@ -631,6 +647,7 @@
   const btnExclude = document.getElementById("btn-exclude");
 
   const finalScoreEl = document.getElementById("final-score");
+  const finalScoreSubEl = document.getElementById("final-score-sub");
   const mistakesTitle = document.getElementById("mistakes-title");
   const mistakesList = document.getElementById("mistakes-list");
   const histogramEl = document.getElementById("stats-histogram");
@@ -639,8 +656,8 @@
   const btnSmartPractice = document.getElementById("btn-smart-practice");
   const btnPracticeMistakes = document.getElementById("btn-practice-mistakes");
   const btnPracticeAll = document.getElementById("btn-practice-all");
-  const btnNewSession = document.getElementById("btn-new-session");
-  const btnNewSessionQuiz = document.getElementById("btn-new-session-quiz");
+  const btnToStart = document.getElementById("btn-to-start");
+  const btnToStartQuiz = document.getElementById("btn-to-start-quiz");
   const resumeBanner = document.getElementById("resume-banner");
   const resumeInfo = document.getElementById("resume-info");
   const btnResume = document.getElementById("btn-resume");
@@ -1392,8 +1409,10 @@
 
     const answeredTotal = score + mistakes.length;
     finalScoreEl.textContent = skipped > 0
-      ? `Score: ${score} / ${answeredTotal} (${skipped} overgeslagen)`
-      : `Score: ${score} / ${answeredTotal}`;
+      ? `Ronde Score: ${score} / ${answeredTotal} (${skipped} overgeslagen)`
+      : `Ronde Score: ${score} / ${answeredTotal}`;
+    const goodWords = countGoodWords();
+    finalScoreSubEl.textContent = `${goodWords.good} / ${goodWords.total} een of meer keer goed`;
     btnPracticeMistakes.disabled = wrongItems().length === 0;
 
     const prevLastRound = normalizeLastRound(storedMeta.lastRound);
@@ -1431,6 +1450,18 @@
   // het hele deck. `now` telt per balk hoeveel daarvan deze ronde beantwoord zijn: in de
   // foutenbalk is dat per se fout gegaan, in een groene balk per se goed. Rechts staan los
   // de woorden op 'niet meer oefenen': die tellen niet mee in de groene balken.
+  // De woorden die in de histogram onder '1 keer goed' of hoger staan: de groene balken
+  // plus de gouden. Een woord dat nu fout staat telt niet mee, ook al had je het eerder
+  // goed; het staat dan in de rode balk. Nooit beantwoorde woorden tellen ook niet mee.
+  function countGoodWords() {
+    const deck = combinedWords.concat(combinedSentences);
+    const good = deck.filter((item) => {
+      const state = stateFor(item);
+      return state.f === 0 && (state.g > 0 || state.x);
+    }).length;
+    return { good, total: deck.length };
+  }
+
   function computeHistogramBuckets(answeredNow) {
     const buckets = [0, 0, 0, 0, 0, 0, 0, 0];
     const now = [0, 0, 0, 0, 0, 0, 0, 0];
@@ -1637,7 +1668,7 @@
 
   btnSmartPractice.addEventListener("click", () => startSmartRound());
 
-  function goToNewSession() {
+  function goToStartScreen() {
     screenEnd.classList.add("hidden");
     screenQuiz.classList.add("hidden");
     screenStart.classList.remove("hidden");
@@ -1647,8 +1678,8 @@
     refreshResumeBanner();
   }
 
-  btnNewSession.addEventListener("click", goToNewSession);
-  btnNewSessionQuiz.addEventListener("click", goToNewSession);
+  btnToStart.addEventListener("click", goToStartScreen);
+  btnToStartQuiz.addEventListener("click", goToStartScreen);
 
   // ---------- Vorige sessie hervatten ----------
   function loadPendingDeck(data) {
