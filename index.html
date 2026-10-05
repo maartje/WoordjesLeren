@@ -16,6 +16,8 @@
     --good-bg: #e6f8ed;
     --bad: #d1372e;
     --bad-bg: #fdeceb;
+    --gold: #b8860b;
+    --gold-bg: #fdf3d8;
     --border: #e2e5ec;
   }
   * { box-sizing: border-box; }
@@ -214,6 +216,18 @@
   .btn-know { background: #e7edfc; color: var(--accent-dark); }
   .btn-dontknow { background: #f3f4f6; color: #4b5563; }
   .btn-next { background: var(--text); color: #fff; width: 100%; margin-top: 16px; }
+  /* Correcties na 'Weet ik': kleiner en secundair, zodat 'Volgende' de blikvanger blijft. */
+  .answer-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+  }
+  .answer-actions button {
+    font-size: 0.85rem;
+    padding: 8px 12px;
+  }
+  .btn-wrong-after-all { background: var(--bad-bg); color: var(--bad); }
+  .btn-exclude { background: var(--gold-bg); color: var(--gold); }
   .end-actions {
     margin-top: 20px;
   }
@@ -429,6 +443,23 @@
     gap: 6px;
     cursor: pointer;
   }
+  /* De twee instellingen die alleen de selectie van "Slim oefenen" sturen, in dezelfde
+     omlijsting als de hervatbalk bovenaan: zo is te zien dat ze bij elkaar horen en
+     dat de instellingen erbuiten voor elke ronde gelden. */
+  .smart-settings {
+    background: #f0f3fb;
+    border: 1px solid #d3ddf7;
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .smart-settings-title {
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: var(--accent-dark);
+  }
 </style>
 </head>
 <body>
@@ -477,22 +508,25 @@
           <label><input type="radio" name="order-mode" value="original"> Originele volgorde</label>
         </div>
       </div>
-      <div class="setting-group">
-        <div class="setting-label">Maximaal aantal woorden per ronde</div>
-        <div class="setting-options">
-          <label><input type="radio" name="max-round" value="10" checked> 10</label>
-          <label><input type="radio" name="max-round" value="20"> 20</label>
-          <label><input type="radio" name="max-round" value="30"> 30</label>
-          <label><input type="radio" name="max-round" value="all"> Alle woorden</label>
+      <div class="smart-settings" id="smart-settings">
+        <div class="smart-settings-title">Alleen voor &ldquo;Slim oefenen&rdquo;<span class="hint-icon" tabindex="0" title="Deze twee instellingen bepalen alleen hoe &ldquo;Slim oefenen&rdquo; zijn ronde samenstelt. &ldquo;Oefen alle woorden&rdquo; neemt altijd het hele deck, en een foutenronde altijd alle woorden die nog fout staan.">?</span></div>
+        <div class="setting-group">
+          <div class="setting-label">Maximaal aantal woorden per ronde</div>
+          <div class="setting-options">
+            <label><input type="radio" name="max-round" value="10" checked> 10</label>
+            <label><input type="radio" name="max-round" value="20"> 20</label>
+            <label><input type="radio" name="max-round" value="30"> 30</label>
+            <label><input type="radio" name="max-round" value="all"> Alle woorden</label>
+          </div>
         </div>
-      </div>
-      <div class="setting-group">
-        <div class="setting-label">Maximaal aantal foute/overgeslagen woorden</div>
-        <div class="setting-options">
-          <label><input type="radio" name="max-wrong-skipped" value="5" checked> 5</label>
-          <label><input type="radio" name="max-wrong-skipped" value="7"> 7</label>
-          <label><input type="radio" name="max-wrong-skipped" value="9"> 9</label>
-          <label><input type="radio" name="max-wrong-skipped" value="10"> 10</label>
+        <div class="setting-group">
+          <div class="setting-label">Maximaal aantal foute/overgeslagen woorden</div>
+          <div class="setting-options">
+            <label><input type="radio" name="max-wrong-skipped" value="5" checked> 5</label>
+            <label><input type="radio" name="max-wrong-skipped" value="7"> 7</label>
+            <label><input type="radio" name="max-wrong-skipped" value="9"> 9</label>
+            <label><input type="radio" name="max-wrong-skipped" value="10"> 10</label>
+          </div>
         </div>
       </div>
     </div>
@@ -524,6 +558,10 @@
     </div>
     <button class="btn-newsession-link" id="btn-new-session-quiz" type="button">Nieuwe sessie</button>
     <div class="feedback" id="feedback"></div>
+    <div class="answer-actions hidden" id="answer-actions">
+      <button class="btn-wrong-after-all" id="btn-wrong-after-all" type="button">Toch fout</button>
+      <button class="btn-exclude" id="btn-exclude" type="button">Niet meer oefenen</button>
+    </div>
     <button class="btn-next hidden" id="btn-next">Volgende &rarr;</button>
   </div>
 
@@ -536,10 +574,11 @@
       <button class="btn-toggle-answers hidden" id="btn-toggle-answers">Toon antwoorden</button>
     </div>
     <div id="mistakes-list"></div>
+    <div class="warning hidden" id="empty-round"></div>
     <div class="end-actions">
       <div class="primary-cta-row">
         <button class="btn-primary-cta" id="btn-smart-practice" type="button">Slim oefenen</button>
-        <span class="info-icon" tabindex="0" title="Korte ronde. Woorden die je nog nooit gezien hebt gaan altijd allemaal mee, bijvoorbeeld na het toevoegen van een lesbestand. Daarnaast het ingestelde aantal foute/overgeslagen woorden: dat getal is het plafond voor foute woorden én voor foute + overgeslagen samen, dus staan er al zoveel woorden fout, dan komt er geen overgeslagen woord bij. De rest van de ronde wordt aangevuld met woorden die volgens de planning weer aan de beurt zijn; hoe vaker je een woord goed hebt, hoe langer het wegblijft.">?</span>
+        <span class="info-icon" tabindex="0" title="Korte ronde. Woorden die je nog nooit gezien hebt gaan altijd allemaal mee, bijvoorbeeld na het toevoegen van een lesbestand. Daarnaast het ingestelde aantal foute/overgeslagen woorden: dat getal is het plafond voor foute woorden én voor foute + overgeslagen samen, dus staan er al zoveel woorden fout, dan komt er geen overgeslagen woord bij. De rest van de ronde wordt aangevuld met woorden die volgens de planning weer aan de beurt zijn; hoe vaker je een woord goed hebt, hoe langer het wegblijft. Woorden die op 'niet meer oefenen' staan blijven buiten de ronde.">?</span>
       </div>
 
       <div class="secondary-actions">
@@ -587,11 +626,15 @@
   const btnSkip = document.getElementById("btn-skip");
   const btnNext = document.getElementById("btn-next");
   const feedbackEl = document.getElementById("feedback");
+  const answerActions = document.getElementById("answer-actions");
+  const btnWrongAfterAll = document.getElementById("btn-wrong-after-all");
+  const btnExclude = document.getElementById("btn-exclude");
 
   const finalScoreEl = document.getElementById("final-score");
   const mistakesTitle = document.getElementById("mistakes-title");
   const mistakesList = document.getElementById("mistakes-list");
   const histogramEl = document.getElementById("stats-histogram");
+  const emptyRoundEl = document.getElementById("empty-round");
   const btnToggleAnswers = document.getElementById("btn-toggle-answers");
   const btnSmartPractice = document.getElementById("btn-smart-practice");
   const btnPracticeMistakes = document.getElementById("btn-practice-mistakes");
@@ -617,10 +660,13 @@
   let skipped = 0;
   let answered = false;
   let answersRevealed = false;
+  let preAnswerState = null; // staat van vóór het huidige antwoord, voor 'Toch fout'
+  let canCorrect = false; // alleen na 'Weet ik' kun je jezelf nog corrigeren
   let direction = "fwd";
   let soundMode = "off";
-  // item -> { fwd, rev } met per richting { g, f, s }:
-  //   g = aantal_goed, f = aantal rondes achter elkaar fout, s = ronde waarvoor het woord staat ingepland.
+  // item -> { fwd, rev } met per richting { g, f, s } en optioneel x:
+  //   g = aantal_goed, f = aantal rondes achter elkaar fout, s = ronde waarvoor het woord staat ingepland,
+  //   x = true als het woord op 'niet meer oefenen' staat en dus buiten slim oefenen blijft.
   let wordStats = new Map();
   let roundNumber = { fwd: 0, rev: 0 }; // rondeteller per richting, opgehoogd aan het eind van elke ronde
 
@@ -677,6 +723,12 @@
     return { fwd: 0, rev: 0 };
   }
 
+  // x alleen opnemen als het woord echt uitgesloten is: scheelt ruimte in de opslag en
+  // houdt de staat van gewone woorden ongewijzigd.
+  function withExcluded(state, excluded) {
+    return excluded ? { ...state, x: true } : state;
+  }
+
   function isSmartState(value) {
     return Boolean(value) && typeof value === "object"
       && typeof value.g === "number" && typeof value.f === "number" && typeof value.s === "number";
@@ -692,8 +744,8 @@
       // Oude formaten (losse streaks) kennen geen planning - statistieken resetten.
       if (!item || (!isSmartState(fwd) && !isSmartState(rev))) continue;
       const value = {};
-      if (isSmartState(fwd)) value.fwd = { g: fwd.g, f: fwd.f, s: fwd.s };
-      if (isSmartState(rev)) value.rev = { g: rev.g, f: rev.f, s: rev.s };
+      if (isSmartState(fwd)) value.fwd = withExcluded({ g: fwd.g, f: fwd.f, s: fwd.s }, fwd.x);
+      if (isSmartState(rev)) value.rev = withExcluded({ g: rev.g, f: rev.f, s: rev.s }, rev.x);
       map.set(item, value);
     }
     return map;
@@ -1092,6 +1144,9 @@
     btnSkip.disabled = false;
     feedbackEl.className = "feedback";
     feedbackEl.textContent = "";
+    answerActions.classList.add("hidden");
+    canCorrect = false;
+    preAnswerState = null;
     btnNext.classList.add("hidden");
     answerInput.focus();
 
@@ -1182,9 +1237,19 @@
     return roundNumber[dir] || 0;
   }
 
-  function recordStat(item, correct) {
+  // baseState is standaard de huidige staat; 'Toch fout' geeft de staat van vóór het
+  // antwoord mee, zodat de correctie niet bovenop het al geboekte goede antwoord komt.
+  function recordStat(item, correct, baseState) {
     const entry = wordStats.get(item) || {};
-    entry[direction] = nextState(stateFor(item), correct, roundNumberFor());
+    entry[direction] = nextState(baseState || stateFor(item), correct, roundNumberFor());
+    wordStats.set(item, entry);
+    persistState();
+  }
+
+  function setExcluded(item, excluded) {
+    const entry = wordStats.get(item) || {};
+    const { g, f, s } = stateFor(item);
+    entry[direction] = withExcluded({ g, f, s }, excluded);
     wordStats.set(item, entry);
     persistState();
   }
@@ -1196,10 +1261,13 @@
     persistState();
   }
 
-  function handleResult(correct) {
+  // fromKnow: alleen bij 'Weet ik' weet de app niet wat je echt geantwoord hebt, dus
+  // alleen daar bied je de correctieknoppen aan.
+  function handleResult(correct, fromKnow) {
     if (answered) return;
     const item = currentItem();
     const answerText = answerWord(item);
+    preAnswerState = stateFor(item);
     recordStat(item, correct);
     answeredItems.push(item);
 
@@ -1216,12 +1284,24 @@
     scoreText.textContent = `Score: ${score}`;
     markAnswered();
 
+    canCorrect = Boolean(fromKnow) && correct;
+    if (canCorrect) showAnswerActions(item);
+
     if (soundMode !== "off") {
       const lang = answerLang(item);
       if (soundMode === "both" || (soundMode === "foreign" && lang !== "nl")) {
         speak(answerText, lang);
       }
     }
+  }
+
+  function showAnswerActions(item) {
+    updateExcludeLabel(item);
+    answerActions.classList.remove("hidden");
+  }
+
+  function updateExcludeLabel(item) {
+    btnExclude.textContent = stateFor(item).x ? "Weer oefenen" : "Niet meer oefenen";
   }
 
   function escapeHtml(str) {
@@ -1238,7 +1318,7 @@
   });
 
   btnKnow.addEventListener("click", () => {
-    handleResult(true);
+    handleResult(true, true);
   });
 
   btnDontKnow.addEventListener("click", () => {
@@ -1271,6 +1351,28 @@
     }
   });
 
+  btnWrongAfterAll.addEventListener("click", () => {
+    if (!canCorrect) return;
+    canCorrect = false;
+    const item = currentItem();
+    // Opnieuw rekenen vanaf de staat van vóór 'Weet ik', niet 'eerst goed en dan fout'.
+    recordStat(item, false, preAnswerState);
+    score -= 1;
+    mistakes.push(item); // item staat al in answeredItems
+    scoreText.textContent = `Score: ${score}`;
+    feedbackEl.className = "feedback bad";
+    feedbackEl.innerHTML = `Fout. Het juiste antwoord was: <b>${escapeHtml(answerWord(item))}</b>`;
+    // Een fout antwoord heft 'niet meer oefenen' op, dus die knop heeft hier geen zin meer.
+    answerActions.classList.add("hidden");
+    btnNext.focus();
+  });
+
+  btnExclude.addEventListener("click", () => {
+    const item = currentItem();
+    setExcluded(item, !stateFor(item).x);
+    updateExcludeLabel(item);
+  });
+
   btnNext.addEventListener("click", () => {
     currentIndex += 1;
     if (currentIndex >= playlist.length) {
@@ -1299,6 +1401,7 @@
       lastRound: { ...prevLastRound, [direction]: { score, total: answeredTotal, skipped, at: Date.now() } },
     });
 
+    emptyRoundEl.classList.add("hidden");
     renderHistogram(new Set(answeredItems));
     renderMistakes();
   }
@@ -1314,26 +1417,39 @@
     "hsl(147, 55%, 80%)",
     "hsl(147, 55%, 80%)",
     "hsl(147, 55%, 80%)",
+    "hsl(43, 60%, 78%)",
   ];
-  const HISTOGRAM_LABELS = ["Over&shy;geslagen", "Fout", "1", "2", "3", "4", "5+"];
+  const HISTOGRAM_LABELS = ["Over&shy;geslagen", "Fout", "1", "2", "3", "4", "5+", "Klaar"];
   const HISTOGRAM_NOW_WRONG = "var(--bad)";
   const HISTOGRAM_NOW_GOOD = "var(--good)";
+  const HISTOGRAM_NOW_EXCLUDED = "var(--gold)";
+  const HISTOGRAM_EXCLUDED_BUCKET = 7;
 
   // Links alle woorden waar nog geen goed antwoord voor is: nog nooit getoond, of door
   // de gebruiker overgeslagen. Daarnaast alle woorden die nog fout staan, ook die van
   // eerdere rondes, en daarna de woorden per aantal keer goed. Samen beslaan de balken
   // het hele deck. `now` telt per balk hoeveel daarvan deze ronde beantwoord zijn: in de
-  // foutenbalk is dat per se fout gegaan, in een groene balk per se goed.
+  // foutenbalk is dat per se fout gegaan, in een groene balk per se goed. Rechts staan los
+  // de woorden op 'niet meer oefenen': die tellen niet mee in de groene balken.
   function computeHistogramBuckets(answeredNow) {
-    const buckets = [0, 0, 0, 0, 0, 0, 0];
-    const now = [0, 0, 0, 0, 0, 0, 0];
+    const buckets = [0, 0, 0, 0, 0, 0, 0, 0];
+    const now = [0, 0, 0, 0, 0, 0, 0, 0];
     for (const item of combinedWords.concat(combinedSentences)) {
       const state = stateFor(item);
-      const bucket = state.f > 0 ? 1 : (state.g === 0 ? 0 : 1 + Math.min(state.g, 5));
+      // Uitgesloten woorden staan apart in de gouden balk en tellen dus niet mee in groen.
+      const bucket = state.x
+        ? HISTOGRAM_EXCLUDED_BUCKET
+        : (state.f > 0 ? 1 : (state.g === 0 ? 0 : 1 + Math.min(state.g, 5)));
       buckets[bucket] += 1;
       if (answeredNow.has(item)) now[bucket] += 1;
     }
     return { buckets, now };
+  }
+
+  function nowColor(i) {
+    if (i === 1) return HISTOGRAM_NOW_WRONG;
+    if (i === HISTOGRAM_EXCLUDED_BUCKET) return HISTOGRAM_NOW_EXCLUDED;
+    return HISTOGRAM_NOW_GOOD;
   }
 
   function renderHistogram(answeredNow) {
@@ -1344,12 +1460,14 @@
         const heightPct = (count / max) * 100;
         // De grijze balk kan niets van deze ronde bevatten: wat je beantwoordt staat
         // daarna fout of goed. De rest is gestapeld, met het deel van deze ronde onderin.
-        const heading = i > 1 ? `${HISTOGRAM_LABELS[i]} keer goed` : HISTOGRAM_LABELS[i];
+        const heading = i === HISTOGRAM_EXCLUDED_BUCKET
+          ? "Niet meer oefenen"
+          : (i > 1 ? `${HISTOGRAM_LABELS[i]} keer goed` : HISTOGRAM_LABELS[i]);
         const title = i > 0 && count > 0
           ? `${heading}: ${count} (${now[i]} deze ronde, ${count - now[i]} eerder)`
           : `${heading}: ${count}`;
         const part = now[i] > 0
-          ? `<div class="histogram-bar-part" style="height:${(now[i] / count) * 100}%; background:${i === 1 ? HISTOGRAM_NOW_WRONG : HISTOGRAM_NOW_GOOD};"></div>`
+          ? `<div class="histogram-bar-part" style="height:${(now[i] / count) * 100}%; background:${nowColor(i)};"></div>`
           : "";
         return `<div class="histogram-col">
           <div class="histogram-count">${count}</div>
@@ -1386,8 +1504,10 @@
   function nextState(state, correct, round) {
     if (correct) {
       const goed = state.g + 1;
-      return { g: goed, f: 0, s: round + intervalFor(goed) };
+      return withExcluded({ g: goed, f: 0, s: round + intervalFor(goed) }, state.x);
     }
+    // Een fout antwoord haalt het woord ook weer uit 'niet meer oefenen': blijkbaar ken
+    // je het toch niet goed genoeg.
     return { g: Math.min(Math.floor(state.g / 2), 4), f: state.f + 1, s: round + 1 };
   }
 
@@ -1395,7 +1515,7 @@
   // woord zijn beurt gehad heeft. Een woord zonder staat krijgt er zo een met s = ronde + 1
   // en telt daarna als overgeslagen in plaats van als nooit getoond.
   function skipState(state, round) {
-    return { g: state.g, f: state.f, s: round + intervalFor(state.g) };
+    return withExcluded({ g: state.g, f: state.f, s: round + intervalFor(state.g) }, state.x);
   }
 
   // Eerst shuffelen, dan stabiel sorteren: gelijke sleutels komen willekeurig te staan.
@@ -1444,12 +1564,12 @@
     return unseen.concat(chosen.slice(0, cap)).map((e) => e.item);
   }
 
+  // Woorden op 'niet meer oefenen' vallen hier af en niet in selectSmartItems: zo tellen
+  // ze ook niet mee voor het minimum aantal woorden per ronde.
   function buildSmartPlaylist() {
-    const entries = combinedWords.concat(combinedSentences).map((item) => ({
-      item,
-      state: stateFor(item),
-      seen: hasStateFor(item),
-    }));
+    const entries = combinedWords.concat(combinedSentences)
+      .map((item) => ({ item, state: stateFor(item), seen: hasStateFor(item) }))
+      .filter((entry) => !entry.state.x);
     if (entries.length === 0) return [];
 
     const selected = selectSmartItems(entries, roundNumberFor(), {
@@ -1461,7 +1581,22 @@
 
   function startSmartRound() {
     direction = getDirection();
-    beginSession(buildSmartPlaylist());
+    const items = buildSmartPlaylist();
+    // Staat alles op 'niet meer oefenen', dan is er niets te oefenen en zou een lege
+    // sessie stuklopen op het eerste woord.
+    if (items.length === 0) {
+      notifyEmptySmartRound();
+      return false;
+    }
+    beginSession(items);
+    return true;
+  }
+
+  function notifyEmptySmartRound() {
+    const message = "Alle woorden staan op 'niet meer oefenen'. Kies 'Oefen alle woorden' om ze toch te oefenen.";
+    const target = screenEnd.classList.contains("hidden") ? startWarning : emptyRoundEl;
+    target.textContent = message;
+    target.classList.remove("hidden");
   }
 
   function renderMistakes() {
@@ -1500,7 +1635,7 @@
     startQuiz(combinedWords, combinedSentences);
   });
 
-  btnSmartPractice.addEventListener("click", startSmartRound);
+  btnSmartPractice.addEventListener("click", () => startSmartRound());
 
   function goToNewSession() {
     screenEnd.classList.add("hidden");
@@ -1529,8 +1664,8 @@
 
   btnResume.addEventListener("click", () => {
     if (!hasDeck()) return;
-    resumeBanner.classList.add("hidden");
-    startSmartRound();
+    // Bij een lege ronde blijft de banner staan, zodat 'Oefen alle woorden' bereikbaar blijft.
+    if (startSmartRound()) resumeBanner.classList.add("hidden");
   });
 
   // Hele lijst oefenen vanaf het startscherm: geen reset, en het ronde-maximum geldt hier niet.
