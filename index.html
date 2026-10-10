@@ -65,7 +65,15 @@
     cursor: help;
     vertical-align: middle;
   }
+  .file-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+  }
+  .file-actions .hint-icon { margin-left: 0; }
   .file-label {
+    flex: 0 0 auto;
     display: inline-block;
     background: #eef0f4;
     color: var(--text);
@@ -78,6 +86,9 @@
     transition: background 0.15s ease;
   }
   .file-label:hover { background: #e2e5ec; }
+  /* Secundair naast "Kies lesbestand(en)": zelfde vorm, maar open in plaats van gevuld. */
+  .btn-new-file { background: none; }
+  .btn-new-file:hover { background: #f4f6fb; }
   input[type="file"] { display: none; }
   .warning {
     margin-top: 16px;
@@ -426,7 +437,8 @@
     gap: 8px;
     padding: 4px 0;
   }
-  .btn-remove-file {
+  .btn-remove-file,
+  .btn-remove-row {
     flex: 0 0 auto;
     width: 22px;
     height: 22px;
@@ -438,6 +450,19 @@
     line-height: 1;
     font-size: 0.85rem;
   }
+  .btn-edit-file {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border-radius: 50%;
+    background: var(--gold-bg);
+    color: var(--gold);
+  }
+  .btn-edit-file svg { width: 12px; height: 12px; }
   .loaded-file-name {
     color: var(--text);
   }
@@ -528,6 +553,82 @@
   .tip-app {
     color: var(--muted);
   }
+  /* ---------- Bewerkscherm ---------- */
+  .edit-file-name {
+    font-weight: 700;
+    word-break: break-all;
+  }
+  .edit-field {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 18px;
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+  .edit-field input[type="text"] {
+    flex: 1 1 auto;
+    max-width: 260px;
+    font-size: 0.95rem;
+    font-weight: 400;
+    padding: 8px 10px;
+  }
+  .edit-field select {
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 400;
+    color: var(--text);
+    background: var(--card-bg);
+    padding: 8px 10px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    outline: none;
+    cursor: pointer;
+  }
+  .edit-field select:focus { border-color: var(--accent); }
+  .edit-section-title {
+    font-weight: 700;
+    font-size: 0.9rem;
+    margin: 22px 0 6px;
+  }
+  .edit-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+  }
+  .edit-row input[type="text"] {
+    flex: 1 1 0;
+    min-width: 0;
+    font-size: 0.95rem;
+    padding: 8px 10px;
+  }
+  .btn-add-row {
+    display: block;
+    background: none;
+    color: var(--accent);
+    padding: 6px 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: underline;
+  }
+  .btn-add-row:hover { background: none; filter: none; color: var(--accent-dark); }
+  .edit-hint {
+    margin-top: 12px;
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.4;
+  }
+  /* Op een smal scherm zijn twee velden naast elkaar te krap voor hele zinnen. */
+  @media (max-width: 520px) {
+    .edit-row {
+      flex-wrap: wrap;
+      row-gap: 6px;
+      padding: 8px 0;
+    }
+    .edit-row input[type="text"]:first-of-type { flex: 1 1 calc(100% - 30px); }
+    .edit-row input[type="text"]:last-of-type { flex: 1 1 100%; margin-left: 30px; }
+  }
 </style>
 </head>
 <body>
@@ -548,8 +649,11 @@
         <button class="btn-new-session" id="btn-clear-progress" type="button">Start nieuwe sessie</button>
       </div>
     </div>
-    <label class="file-label" for="file-input" id="file-label">Kies lesbestand(en)</label>
-    <span class="hint-icon" tabindex="0" title="Selecteer een of meer lesbestanden in .yaml formaat">?</span>
+    <div class="file-actions">
+      <label class="file-label" for="file-input" id="file-label">Kies lesbestand(en)</label>
+      <span class="hint-icon" tabindex="0" title="Selecteer een of meer lesbestanden in .yaml formaat">?</span>
+      <button class="file-label btn-new-file" id="btn-new-file" type="button">Maak nieuw lesbestand</button>
+    </div>
     <input type="file" id="file-input" accept=".yaml,.yml" multiple>
     <div class="file-list" id="file-list"></div>
     <div class="warning hidden" id="start-warning"></div>
@@ -564,8 +668,8 @@
       <div class="setting-group">
         <div class="setting-label">Automatisch voorlezen<span class="hint-icon" tabindex="0" title="Bij &ldquo;Alleen voorlezen&rdquo; typ je niets: je hoort het woord, drukt op &ldquo;Weet ik&rdquo; of &ldquo;Weet ik niet&rdquo;, en na het antwoord gaat hij vanzelf door.">?</span></div>
         <div class="setting-options">
-          <label><input type="radio" name="sound-mode" value="off" checked> Uit</label>
-          <label><input type="radio" name="sound-mode" value="foreign"> Vreemde taal</label>
+          <label><input type="radio" name="sound-mode" value="off"> Uit</label>
+          <label><input type="radio" name="sound-mode" value="foreign" checked> Vreemde taal</label>
           <label><input type="radio" name="sound-mode" value="both"> Beide talen</label>
           <label><input type="radio" name="sound-mode" value="listen"> Alleen voorlezen</label>
         </div>
@@ -680,6 +784,43 @@
     </div>
   </div>
 
+  <!-- Bewerkscherm: de inhoud van één lesbestand aanpassen -->
+  <div id="screen-edit" class="hidden">
+    <h1 id="edit-title">Lesbestand bewerken</h1>
+    <div class="edit-file-name" id="edit-file-name"></div>
+    <div class="edit-field hidden" id="edit-name-row">
+      <label for="edit-name-input">Bestandsnaam</label>
+      <input type="text" id="edit-name-input" placeholder="les1.yaml" autocomplete="off" autocapitalize="off" spellcheck="false">
+    </div>
+    <div class="edit-field">
+      <label for="edit-lang-select">Taal</label>
+      <select id="edit-lang-select">
+        <option value="en">Engels (en)</option>
+        <option value="fr">Frans (fr)</option>
+        <option value="de">Duits (de)</option>
+        <option value="it">Italiaans (it)</option>
+        <option value="es">Spaans (es)</option>
+      </select>
+      <span class="hint-icon" tabindex="0" title="De vreemde taal in dit bestand. De code hiervan komt als sleutel in het .yaml-bestand te staan, bijvoorbeeld 'fr:'.">?</span>
+    </div>
+
+    <div class="edit-section-title">Woorden</div>
+    <div id="edit-words"></div>
+    <button class="btn-add-row" id="btn-add-word" type="button">+ Woord toevoegen</button>
+
+    <div class="edit-section-title">Zinnen</div>
+    <div id="edit-sentences"></div>
+    <button class="btn-add-row" id="btn-add-sentence" type="button">+ Zin toevoegen</button>
+
+    <div class="warning hidden" id="edit-warning"></div>
+
+    <div class="buttons">
+      <button class="btn-check" id="btn-edit-save" type="button">Opslaan</button>
+    </div>
+    <div class="edit-hint" id="edit-hint"></div>
+    <button class="btn-tostart-link" id="btn-edit-cancel" type="button">Annuleren</button>
+  </div>
+
 </div>
 
 <dialog class="confirm-dialog" id="confirm-new-session">
@@ -699,6 +840,7 @@
   const screenStart = document.getElementById("screen-start");
   const screenQuiz = document.getElementById("screen-quiz");
   const screenEnd = document.getElementById("screen-end");
+  const screenEdit = document.getElementById("screen-edit");
 
   const fileInput = document.getElementById("file-input");
   const fileLabelEl = document.getElementById("file-label");
@@ -739,6 +881,21 @@
   const btnClearProgress = document.getElementById("btn-clear-progress");
   const btnPracticeAllStart = document.getElementById("btn-practice-all-start");
   const resumeActionsRow = document.getElementById("resume-actions-row");
+  const btnNewFile = document.getElementById("btn-new-file");
+  const editTitleEl = document.getElementById("edit-title");
+  const editFileNameEl = document.getElementById("edit-file-name");
+  const editNameRow = document.getElementById("edit-name-row");
+  const editNameInput = document.getElementById("edit-name-input");
+  const editLangSelect = document.getElementById("edit-lang-select");
+  const editWordsEl = document.getElementById("edit-words");
+  const editSentencesEl = document.getElementById("edit-sentences");
+  const editWarning = document.getElementById("edit-warning");
+  const editHint = document.getElementById("edit-hint");
+  const btnAddWord = document.getElementById("btn-add-word");
+  const btnAddSentence = document.getElementById("btn-add-sentence");
+  const btnEditSave = document.getElementById("btn-edit-save");
+  const btnEditCancel = document.getElementById("btn-edit-cancel");
+
   const confirmDialog = document.getElementById("confirm-new-session");
   const btnConfirmOk = document.getElementById("btn-confirm-ok");
   const btnConfirmCancel = document.getElementById("btn-confirm-cancel");
@@ -755,13 +912,19 @@
   let preAnswerState = null; // staat van vóór het huidige antwoord, voor 'Toch fout'
   let canCorrect = false; // alleen na 'Weet ik' kun je jezelf nog corrigeren
   let direction = "fwd";
-  let soundMode = "off";
+  let soundMode = "foreign";
   let advanceGen = 0;        // elke sprong maakt een nog lopende automatische sprong ongeldig
   // item -> { fwd, rev } met per richting { g, f, s } en optioneel x:
   //   g = aantal_goed, f = aantal rondes achter elkaar fout, s = ronde waarvoor het woord staat ingepland,
   //   x = true als het woord op 'niet meer oefenen' staat en dus buiten slim oefenen blijft.
   let wordStats = new Map();
   let roundNumber = { fwd: 0, rev: 0 }; // rondeteller per richting, opgehoogd aan het eind van elke ronde
+
+  function showScreen(target) {
+    for (const screen of [screenStart, screenQuiz, screenEnd, screenEdit]) {
+      screen.classList.toggle("hidden", screen !== target);
+    }
+  }
 
   // ---------- Voortgang opslaan (localStorage) ----------
   const STORAGE_KEY = "woordjesleren:progress:v1";
@@ -1037,6 +1200,9 @@
     fileListEl.innerHTML = names
       .map((name) => `<div class="loaded-file-row" data-file="${escapeHtml(name)}">
         <button class="btn-remove-file" type="button" aria-label="Verwijder ${escapeHtml(name)}">&times;</button>
+        <button class="btn-edit-file" type="button" aria-label="Bewerk ${escapeHtml(name)}" title="Bewerk ${escapeHtml(name)}">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.21a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+        </button>
         <span class="loaded-file-name">${escapeHtml(name)}</span>
       </div>`)
       .join("");
@@ -1057,10 +1223,10 @@
   }
 
   fileListEl.addEventListener("click", (e) => {
-    const btn = e.target.closest(".btn-remove-file");
-    if (!btn) return;
-    const row = btn.closest(".loaded-file-row");
-    if (row) removeFile(row.dataset.file);
+    const row = e.target.closest(".loaded-file-row");
+    if (!row) return;
+    if (e.target.closest(".btn-remove-file")) removeFile(row.dataset.file);
+    else if (e.target.closest(".btn-edit-file")) openEditScreen(row.dataset.file);
   });
 
   fileInput.addEventListener("change", async () => {
@@ -1109,6 +1275,357 @@
       renderFileList();
       refreshResumeBanner();
     }
+  });
+
+  // ---------- Lesbestand bewerken ----------
+  // De rijen worden met createElement opgebouwd en daarna niet meer opnieuw gerenderd:
+  // herrenderen zou de focus en de nog niet opgeslagen tekst in de invoervelden wissen.
+  let editDraft = null;
+  // Bestandshandles blijven de sessie lang bewaard, zodat je maar één keer per bestand
+  // hoeft aan te wijzen waar het staat.
+  const fileHandles = new Map();
+
+  function canSaveInPlace() {
+    return typeof window.showSaveFilePicker === "function";
+  }
+
+  function makeDraftEntries(items, fileName) {
+    return items
+      .filter((item) => item.file === fileName)
+      .map((item) => ({ src: item, word: item.word, nl: item.nl }));
+  }
+
+  function addEditRow(listEl, entries, entry) {
+    const row = document.createElement("div");
+    row.className = "edit-row";
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "btn-remove-row";
+    removeBtn.innerHTML = "&times;";
+    removeBtn.setAttribute("aria-label", "Verwijder deze regel");
+    removeBtn.addEventListener("click", () => {
+      const index = entries.indexOf(entry);
+      if (index !== -1) entries.splice(index, 1);
+      row.remove();
+    });
+
+    const wordInput = document.createElement("input");
+    wordInput.type = "text";
+    wordInput.className = "edit-word-input";
+    wordInput.value = entry.word;
+    wordInput.placeholder = editDraft.lang || "vreemde taal";
+    wordInput.addEventListener("input", () => { entry.word = wordInput.value; });
+
+    const nlInput = document.createElement("input");
+    nlInput.type = "text";
+    nlInput.value = entry.nl;
+    nlInput.placeholder = "nl";
+    nlInput.addEventListener("input", () => { entry.nl = nlInput.value; });
+
+    row.append(removeBtn, wordInput, nlInput);
+    listEl.appendChild(row);
+    entry.el = row;
+    return wordInput;
+  }
+
+  function renderEditRows(listEl, entries) {
+    listEl.innerHTML = "";
+    for (const entry of entries) addEditRow(listEl, entries, entry);
+  }
+
+  function openEditScreen(fileName) {
+    const allItems = combinedWords.concat(combinedSentences);
+    const first = allItems.find((item) => item.file === fileName);
+    if (!first) return;
+
+    editDraft = {
+      fileName,
+      lang: first.lang,
+      words: makeDraftEntries(combinedWords, fileName),
+      sentences: makeDraftEntries(combinedSentences, fileName),
+      isNew: false,
+    };
+    renderEditScreen();
+  }
+
+  function openNewFileScreen() {
+    editDraft = {
+      fileName: "",
+      lang: editLangSelect.options[0].value,
+      // Eén lege regel per sectie, zodat je meteen kunt typen; lege regels die blijven staan
+      // worden bij het opslaan genegeerd.
+      words: [{ src: null, word: "", nl: "" }],
+      sentences: [{ src: null, word: "", nl: "" }],
+      isNew: true,
+    };
+    renderEditScreen();
+  }
+
+  function renderEditScreen() {
+    const { fileName, isNew } = editDraft;
+    editTitleEl.textContent = isNew ? "Nieuw lesbestand" : "Lesbestand bewerken";
+    editFileNameEl.textContent = isNew ? "" : fileName;
+    editFileNameEl.classList.toggle("hidden", isNew);
+    editNameRow.classList.toggle("hidden", !isNew);
+    editNameInput.value = "";
+    selectLanguage(editDraft.lang);
+    renderEditRows(editWordsEl, editDraft.words);
+    renderEditRows(editSentencesEl, editDraft.sentences);
+    editWarning.classList.add("hidden");
+    editHint.textContent = editHintText();
+    showScreen(screenEdit);
+    if (isNew) editNameInput.focus();
+  }
+
+  function editHintText() {
+    if (editDraft.isNew) {
+      return canSaveInPlace()
+        ? "Bij Opslaan kies je waar het bestand komt te staan; sla het op in je lesmap."
+        : "Bij Opslaan wordt het bestand gedownload; verplaats het daarna naar je lesmap.";
+    }
+    const name = editDraft.fileName;
+    return canSaveInPlace()
+      ? `Bij Opslaan wijs je "${name}" aan om het te overschrijven. Lukt dat niet, dan wordt het bestand gedownload en vervang je het zelf in je lesmap.`
+      : `Bij Opslaan wordt "${name}" gedownload; vervang het bestand daarna zelf in je lesmap.`;
+  }
+
+  btnNewFile.addEventListener("click", openNewFileScreen);
+
+  function closeEditScreen() {
+    editDraft = null;
+    goToStartScreen();
+  }
+
+  // Een bestand kan een taal hebben die niet in de lijst staat; die mag niet stilletjes
+  // veranderen, dus komt hij er als extra keuze bij.
+  function selectLanguage(lang) {
+    const previous = editLangSelect.querySelector("option[data-extra]");
+    if (previous) previous.remove();
+    if (!Array.from(editLangSelect.options).some((option) => option.value === lang)) {
+      const option = new Option(lang, lang);
+      option.dataset.extra = "true";
+      editLangSelect.add(option, 0);
+    }
+    editLangSelect.value = lang;
+  }
+
+  editLangSelect.addEventListener("change", () => {
+    if (!editDraft) return;
+    editDraft.lang = editLangSelect.value;
+    for (const input of screenEdit.querySelectorAll(".edit-word-input")) {
+      input.placeholder = editDraft.lang;
+    }
+  });
+
+  function addEmptyRow(listEl, section) {
+    if (!editDraft) return;
+    const entry = { src: null, word: "", nl: "" };
+    editDraft[section].push(entry);
+    addEditRow(listEl, editDraft[section], entry).focus();
+  }
+
+  btnAddWord.addEventListener("click", () => addEmptyRow(editWordsEl, "words"));
+  btnAddSentence.addEventListener("click", () => addEmptyRow(editSentencesEl, "sentences"));
+  btnEditCancel.addEventListener("click", closeEditScreen);
+
+  // ---------- Terugschrijven naar YAML ----------
+  // parseLessonYaml leest een waarde tot het einde van de regel en haalt alleen omsluitende
+  // quotes weg (zonder escapes), dus aanhalen is nooit fout en alleen nodig als de waarde er
+  // anders uit zou komen dan hij erin ging. Zo blijven gewone woorden onaangehaald.
+  function yamlValue(value) {
+    const isQuoted =
+      value.length >= 2 &&
+      ((value[0] === '"' && value.endsWith('"')) || (value[0] === "'" && value.endsWith("'")));
+    const needsQuotes =
+      value !== value.trim() ||
+      isQuoted ||
+      /^[-?:,[\]{}#&*!|>%@`]/.test(value) ||
+      value.includes(": ") ||
+      value.endsWith(":") ||
+      value.includes(" #");
+    return needsQuotes ? `"${value}"` : value;
+  }
+
+  function serializeLessonYaml(lang, words, sentences) {
+    const lines = [];
+    const addSection = (name, entries) => {
+      lines.push(`${name}:`);
+      for (const entry of entries) {
+        lines.push(`  - ${lang}: ${yamlValue(entry.word)}`);
+        lines.push(`    nl: ${yamlValue(entry.nl)}`);
+      }
+    };
+    addSection("words", words);
+    addSection("sentences", sentences);
+    return lines.join("\n") + "\n";
+  }
+
+  async function ensureWritePermission(handle) {
+    try {
+      const options = { mode: "readwrite" };
+      if ((await handle.queryPermission(options)) === "granted") return true;
+      return (await handle.requestPermission(options)) === "granted";
+    } catch (err) {
+      return false;
+    }
+  }
+
+  async function saveInPlace(fileName, text) {
+    let handle = fileHandles.get(fileName);
+    if (handle && !(await ensureWritePermission(handle))) handle = null;
+    if (!handle) {
+      handle = await window.showSaveFilePicker({
+        suggestedName: fileName,
+        types: [{ description: "Lesbestand", accept: { "text/yaml": [".yaml", ".yml"] } }],
+      });
+    }
+    const writable = await handle.createWritable();
+    await writable.write(text);
+    await writable.close();
+    fileHandles.set(fileName, handle);
+  }
+
+  function downloadText(fileName, text) {
+    const url = URL.createObjectURL(new Blob([text], { type: "text/yaml" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function saveTextToFile(fileName, text) {
+    if (canSaveInPlace()) {
+      try {
+        await saveInPlace(fileName, text);
+        return;
+      } catch (err) {
+        // Annuleren is een keuze van de gebruiker; andere fouten (geen rechten, browser wil
+        // niet) mogen het opslaan niet blokkeren - dan downloaden we het bestand alsnog.
+        if (err && err.name === "AbortError") throw err;
+        fileHandles.delete(fileName);
+      }
+    }
+    downloadText(fileName, text);
+  }
+
+  // Een regel waarin niets is ingevuld is gewoon een regel die je niet gebruikt hebt; die
+  // hoort het opslaan niet te blokkeren. Half ingevulde regels blijven wel staan.
+  function dropEmptyRows(entries) {
+    for (let i = entries.length - 1; i >= 0; i--) {
+      const entry = entries[i];
+      if (entry.word.trim() || entry.nl.trim()) continue;
+      if (entry.el) entry.el.remove();
+      entries.splice(i, 1);
+    }
+  }
+
+  // Een bestandsnaam, geen pad: alleen de naam zelf, en altijd met een yaml-extensie.
+  function normalizeFileName(raw) {
+    const name = raw.trim();
+    if (!name) return "";
+    return /\.ya?ml$/i.test(name) ? name : `${name}.yaml`;
+  }
+
+  function validateFileName() {
+    const name = normalizeFileName(editNameInput.value);
+    if (!name) return "Geef het lesbestand een naam.";
+    if (/[\\/]/.test(name)) return "Een bestandsnaam kan geen / of \\ bevatten.";
+    if ((storedMeta.fileNames || []).includes(name)) {
+      return `"${name}" is al geladen. Kies een andere naam.`;
+    }
+    editDraft.fileName = name;
+    return null;
+  }
+
+  // Geeft een melding terug als er iets niet klopt; anders wordt de ingevoerde tekst meteen
+  // opgeschoond, zodat opslaan verder met nette waarden werkt.
+  function validateEditDraft() {
+    if (editDraft.isNew) {
+      const problem = validateFileName();
+      if (problem) return problem;
+    }
+    const lang = editLangSelect.value;
+    if (!lang) return "Kies een taal.";
+    dropEmptyRows(editDraft.words);
+    dropEmptyRows(editDraft.sentences);
+    const entries = editDraft.words.concat(editDraft.sentences);
+    if (entries.length === 0) {
+      return "Een lesbestand moet minstens één woord of zin bevatten.";
+    }
+    if (entries.some((entry) => !entry.word.trim() || !entry.nl.trim())) {
+      return "Vul bij elke regel beide velden in, of verwijder de regel.";
+    }
+    editDraft.lang = lang;
+    for (const entry of entries) {
+      entry.word = entry.word.trim();
+      entry.nl = entry.nl.trim();
+    }
+    return null;
+  }
+
+  // Past de bewerking toe op de geladen woordenlijst. Bestaande items worden in place
+  // gemuteerd: wordStats is op objectidentiteit gesleuteld, dus zo houdt een gewijzigd woord
+  // zijn voortgang. De items van dit bestand blijven op hun oude plek in het deck staan.
+  function applyEditDraft(combined, entries) {
+    const { fileName, lang } = editDraft;
+    const updated = entries.map((entry) => {
+      if (!entry.src) return { word: entry.word, nl: entry.nl, lang, file: fileName };
+      entry.src.word = entry.word;
+      entry.src.nl = entry.nl;
+      entry.src.lang = lang;
+      return entry.src;
+    });
+    const surviving = new Set(updated);
+    const result = [];
+    let placed = false;
+    for (const item of combined) {
+      if (item.file !== fileName) {
+        result.push(item);
+        continue;
+      }
+      if (!placed) {
+        result.push(...updated);
+        placed = true;
+      }
+      if (!surviving.has(item)) wordStats.delete(item);
+    }
+    if (!placed) result.push(...updated);
+    return result;
+  }
+
+  btnEditSave.addEventListener("click", async () => {
+    if (!editDraft) return;
+    const problem = validateEditDraft();
+    if (problem) {
+      editWarning.textContent = problem;
+      editWarning.classList.remove("hidden");
+      return;
+    }
+    editWarning.classList.add("hidden");
+
+    // Eerst wegschrijven, dan pas het geheugen bijwerken: annuleert de gebruiker de
+    // opslaan-dialoog, dan is er niets veranderd en blijf je gewoon in het bewerkscherm.
+    try {
+      await saveTextToFile(
+        editDraft.fileName,
+        serializeLessonYaml(editDraft.lang, editDraft.words, editDraft.sentences)
+      );
+    } catch (err) {
+      if (err && err.name === "AbortError") return;
+      editWarning.textContent = "Het bestand kon niet opgeslagen worden.";
+      editWarning.classList.remove("hidden");
+      return;
+    }
+
+    if (editDraft.isNew) {
+      storedMeta.fileNames = (storedMeta.fileNames || []).concat(editDraft.fileName);
+    }
+    combinedWords = applyEditDraft(combinedWords, editDraft.words);
+    combinedSentences = applyEditDraft(combinedSentences, editDraft.sentences);
+    persistState({ fileNames: storedMeta.fileNames });
+    closeEditScreen();
   });
 
   // ---------- Quiz setup ----------
@@ -1182,7 +1699,7 @@
 
   function getSoundMode() {
     const el = document.querySelector('input[name="sound-mode"]:checked');
-    return el ? el.value : "off";
+    return el ? el.value : "foreign";
   }
 
   function isListenMode() {
@@ -1225,9 +1742,7 @@
     cancelAutoAdvance();
     screenQuiz.classList.toggle("listen-mode", isListenMode());
 
-    screenStart.classList.add("hidden");
-    screenEnd.classList.add("hidden");
-    screenQuiz.classList.remove("hidden");
+    showScreen(screenQuiz);
 
     persistState();
     showCurrentItem();
@@ -1523,8 +2038,7 @@
 
   // ---------- End screen ----------
   function showEndScreen() {
-    screenQuiz.classList.add("hidden");
-    screenEnd.classList.remove("hidden");
+    showScreen(screenEnd);
     answersRevealed = false;
 
     roundNumber = { ...normalizeRoundNumber(roundNumber), [direction]: roundNumberFor() + 1 };
@@ -1793,9 +2307,7 @@
   function goToStartScreen() {
     cancelAutoAdvance();
     if (speechSupported) window.speechSynthesis.cancel();
-    screenEnd.classList.add("hidden");
-    screenQuiz.classList.add("hidden");
-    screenStart.classList.remove("hidden");
+    showScreen(screenStart);
     fileInput.value = "";
     renderFileList();
     startWarning.classList.add("hidden");
