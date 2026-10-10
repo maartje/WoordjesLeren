@@ -465,22 +465,68 @@
     gap: 6px;
     cursor: pointer;
   }
-  /* De twee instellingen die alleen de selectie van "Slim oefenen" sturen, in dezelfde
-     omlijsting als de hervatbalk bovenaan: zo is te zien dat ze bij elkaar horen en
-     dat de instellingen erbuiten voor elke ronde gelden. */
-  .smart-settings {
-    background: #f0f3fb;
-    border: 1px solid #d3ddf7;
+  /* Uitklapbare sectie met een eigen omlijsting; gebruikt voor de instellingen van
+     "Slim oefenen" en voor de tips. Beide staan standaard dicht zodat het startscherm kort blijft. */
+  .foldout {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
     border-radius: 10px;
-    padding: 14px 16px;
+    padding: 10px 16px;
+  }
+  .foldout[open] {
+    padding-bottom: 14px;
+  }
+  .foldout-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    list-style: none;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: var(--text);
+    padding: 4px 0;
+  }
+  .foldout-title::-webkit-details-marker {
+    display: none;
+  }
+  /* Driehoekje dat meedraait als de sectie opengaat. */
+  .foldout-title::before {
+    content: "";
+    flex: 0 0 auto;
+    width: 0;
+    height: 0;
+    border-left: 5px solid currentColor;
+    border-top: 4px solid transparent;
+    border-bottom: 4px solid transparent;
+    transition: transform 0.15s ease;
+  }
+  .foldout[open] .foldout-title::before {
+    transform: rotate(90deg);
+  }
+  .foldout-body {
     display: flex;
     flex-direction: column;
     gap: 14px;
+    margin-top: 14px;
   }
-  .smart-settings-title {
-    font-weight: 700;
-    font-size: 0.8rem;
-    color: var(--accent-dark);
+  /* De tips staan los van de instellingen, dus met dezelfde tussenruimte als binnen .settings. */
+  #tips {
+    margin-top: 14px;
+  }
+  .tips-list {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--text);
+  }
+  .tips-list li + li {
+    margin-top: 10px;
+  }
+  /* "In de app:" scheidt het principe van de toepassing hier, zonder extra kopjes. */
+  .tip-app {
+    color: var(--muted);
   }
 </style>
 </head>
@@ -531,28 +577,48 @@
           <label><input type="radio" name="order-mode" value="original"> Originele volgorde</label>
         </div>
       </div>
-      <div class="smart-settings" id="smart-settings">
-        <div class="smart-settings-title">Instellingen voor &ldquo;Slim oefenen&rdquo;<span class="hint-icon" tabindex="0" title="Deze twee instellingen bepalen alleen hoe &ldquo;Slim oefenen&rdquo; zijn ronde samenstelt. &ldquo;Oefen alle woorden&rdquo; neemt altijd het hele deck, en een foutenronde altijd alle woorden die nog fout staan.">?</span></div>
-        <div class="setting-group">
-          <div class="setting-label">Maximaal aantal woorden per ronde</div>
-          <div class="setting-options">
-            <label><input type="radio" name="max-round" value="10" checked> 10</label>
-            <label><input type="radio" name="max-round" value="20"> 20</label>
-            <label><input type="radio" name="max-round" value="30"> 30</label>
-            <label><input type="radio" name="max-round" value="all"> Alle woorden</label>
+      <!-- Deze twee instellingen sturen alleen de selectie van "Slim oefenen"; de instellingen
+           erboven gelden voor elke ronde. -->
+      <details class="foldout" id="smart-settings">
+        <summary class="foldout-title">Instellingen voor &ldquo;Slim oefenen&rdquo;<span class="hint-icon" tabindex="0" title="Deze twee instellingen bepalen alleen hoe &ldquo;Slim oefenen&rdquo; zijn ronde samenstelt. &ldquo;Oefen alle woorden&rdquo; neemt altijd het hele deck, en een foutenronde altijd alle woorden die nog fout staan.">?</span></summary>
+        <div class="foldout-body">
+          <div class="setting-group">
+            <div class="setting-label">Maximaal aantal woorden per ronde</div>
+            <div class="setting-options">
+              <label><input type="radio" name="max-round" value="10" checked> 10</label>
+              <label><input type="radio" name="max-round" value="20"> 20</label>
+              <label><input type="radio" name="max-round" value="30"> 30</label>
+              <label><input type="radio" name="max-round" value="all"> Alle woorden</label>
+            </div>
+          </div>
+          <div class="setting-group">
+            <div class="setting-label">Maximaal aantal foute/overgeslagen woorden</div>
+            <div class="setting-options">
+              <label><input type="radio" name="max-wrong-skipped" value="5" checked> 5</label>
+              <label><input type="radio" name="max-wrong-skipped" value="7"> 7</label>
+              <label><input type="radio" name="max-wrong-skipped" value="9"> 9</label>
+              <label><input type="radio" name="max-wrong-skipped" value="10"> 10</label>
+            </div>
           </div>
         </div>
-        <div class="setting-group">
-          <div class="setting-label">Maximaal aantal foute/overgeslagen woorden</div>
-          <div class="setting-options">
-            <label><input type="radio" name="max-wrong-skipped" value="5" checked> 5</label>
-            <label><input type="radio" name="max-wrong-skipped" value="7"> 7</label>
-            <label><input type="radio" name="max-wrong-skipped" value="9"> 9</label>
-            <label><input type="radio" name="max-wrong-skipped" value="10"> 10</label>
-          </div>
-        </div>
-      </div>
+      </details>
     </div>
+    <!-- Achtergrond bij het oefenen: wat werkt, en hoe je dat met deze app doet. -->
+    <details class="foldout" id="tips">
+      <summary class="foldout-title">Tips: hoe onthoud je woordjes?</summary>
+      <div class="foldout-body">
+        <ul class="tips-list">
+          <li><strong>Actief ophalen (active recall)</strong> &mdash; Je onthoudt een woord beter als je de betekenis zelf uit je geheugen opdiept dan als je hem naleest. <span class="tip-app">In de app: het gevraagde woord wordt altijd getoond zonder het antwoord, dus je moet het zelf actief in het tekstvak typen. De knoppen &ldquo;Weet ik&rdquo; en &ldquo;Weet ik niet&rdquo; helpen om nodeloos typewerk te vermijden.</span></li>
+          <li><strong>Gespreide herhaling (spaced repetition)</strong> &mdash; Herhalen vlak voordat je iets dreigt te vergeten verankert het in je langetermijngeheugen; verspreid over dagen levert meer op dan &eacute;&eacute;n lange sessie. <span class="tip-app">In de app: &ldquo;Slim oefenen&rdquo; doet die planning zelf &mdash; hoe vaker een woord goed gaat, hoe langer het wegblijft.</span></li>
+          <li><strong>Kort en gefocust</strong> &mdash; Je brein neemt per sessie maar een beperkte hoeveelheid nieuwe informatie op: 15 tot 20 minuten met daarna pauze werkt beter dan doorgaan. <span class="tip-app">In de app: houd het aantal nieuwe of foute woorden per ronde klein (standaard 5) en vul die aan tot een maximum (standaard 10) met woorden die je al eens goed gedaan hebt. Deze strategie wordt standaard toegepast bij &ldquo;Slim oefenen&rdquo;.</span></li>
+          <li><strong>Multisensorieel leren</strong> &mdash; Horen, uitspreken en schrijven leggen elk een eigen geheugenspoor aan, naast het visuele, waardoor je woorden beter en sneller leert. <span class="tip-app">In de app: zet &ldquo;Automatisch voorlezen&rdquo; aan en spreek het woord hardop na; schrijf hardnekkige woorden daarnaast een paar keer met de hand op.</span></li>
+          <li><strong>Dual coding en visualisatie</strong> &mdash; Informatie die als beeld &eacute;n als taal is opgeslagen, vind je langs twee wegen terug. <span class="tip-app">In de app: roep bij het lezen of horen van een woord bewust een beeld of situatie op, in plaats van de letters te herhalen.</span></li>
+          <li><strong>Trefwoordmethode (keyword method)</strong> &mdash; Zoek een klankverwantschap in het Nederlands en knoop daar een beeld aan vast. Het Spaanse <em>gato</em> (kat) klinkt als &ldquo;gat&rdquo;: een kat die door een gat in de schutting kruipt. <span class="tip-app">In de app: bedenk zo&rsquo;n ezelsbruggetje voor woorden die steeds opnieuw fout gaan.</span></li>
+          <li><strong>Contextueel leren</strong> &mdash; Een woord in een betekenisvolle zin onthoud je aanzienlijk sneller dan als los item. <span class="tip-app">In de app: gebruik de voorbeeldzinnen uit het lesbestand, of bedenk zelf een zin met het woord erin.</span></li>
+          <li><strong>Geheugenpaleis (loci-methode)</strong> &mdash; Koppel woorden aan vaste plekken op een bekende route door je huis en loop die route in gedachten af. <span class="tip-app">In de app: vooral nuttig voor abstracte woorden en rijtjes die fout blijven gaan.</span></li>
+        </ul>
+      </div>
+    </details>
   </div>
 
   <!-- Quiz-scherm -->
@@ -666,6 +732,7 @@
   const btnPracticeAll = document.getElementById("btn-practice-all");
   const btnToStart = document.getElementById("btn-to-start");
   const btnToStartQuiz = document.getElementById("btn-to-start-quiz");
+  const smartSettings = document.getElementById("smart-settings");
   const resumeBanner = document.getElementById("resume-banner");
   const resumeInfo = document.getElementById("resume-info");
   const btnResume = document.getElementById("btn-resume");
@@ -809,6 +876,7 @@
         orderMode: getOrderMode(),
         maxRound: getMaxRoundValue(),
         maxWrongSkipped: getMaxWrongSkipped(),
+        smartSettingsOpen: smartSettings.open,
         roundNumber: normalizeRoundNumber(roundNumber),
         words: combinedWords,
         sentences: combinedSentences,
@@ -850,6 +918,9 @@
     }
     if (stored && stored.maxRound) {
       setMaxRoundRadio(stored.maxRound);
+    }
+    if (stored && typeof stored.smartSettingsOpen === "boolean") {
+      smartSettings.open = stored.smartSettingsOpen;
     }
     // maxNewWrong is de oude sleutel: meelezen zodat een ingestelde waarde niet verdwijnt.
     const storedWrongSkipped = stored && (stored.maxWrongSkipped || stored.maxNewWrong);
@@ -1806,6 +1877,9 @@
 
   document.querySelectorAll('input[name="sound-mode"], input[name="order-mode"], input[name="max-round"], input[name="max-wrong-skipped"]')
     .forEach((el) => el.addEventListener("change", persistSettings));
+
+  // Open of dicht onthouden, zodat de sectie niet elke keer opnieuw dichtklapt.
+  smartSettings.addEventListener("toggle", persistSettings);
 
   // ---------- Init ----------
   // Het opgeslagen deck meteen inladen, zodat de bestandslijst, de bestandskiezer en
