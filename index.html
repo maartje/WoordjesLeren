@@ -193,6 +193,13 @@
   }
   input[type="text"]:focus { border-color: var(--accent); }
   input[type="text"]:disabled { background: #f7f8fb; color: var(--muted); }
+  /* 'Alleen voorlezen': je typt niet en je leest niet mee. Het scherm blijft van woord tot
+     woord hetzelfde; alles wat er na een antwoord bij zou komen hoor je in plaats daarvan. */
+  #screen-quiz.listen-mode #answer-input,
+  #screen-quiz.listen-mode #btn-check,
+  #screen-quiz.listen-mode #feedback,
+  #screen-quiz.listen-mode #answer-actions,
+  #screen-quiz.listen-mode #btn-next { display: none; }
   .buttons {
     display: flex;
     gap: 10px;
@@ -509,11 +516,12 @@
         </div>
       </div>
       <div class="setting-group">
-        <div class="setting-label">Automatisch voorlezen</div>
+        <div class="setting-label">Automatisch voorlezen<span class="hint-icon" tabindex="0" title="Bij &ldquo;Alleen voorlezen&rdquo; typ je niets: je hoort het woord, drukt op &ldquo;Weet ik&rdquo; of &ldquo;Weet ik niet&rdquo;, en na het antwoord gaat hij vanzelf door.">?</span></div>
         <div class="setting-options">
           <label><input type="radio" name="sound-mode" value="off" checked> Uit</label>
           <label><input type="radio" name="sound-mode" value="foreign"> Vreemde taal</label>
           <label><input type="radio" name="sound-mode" value="both"> Beide talen</label>
+          <label><input type="radio" name="sound-mode" value="listen"> Alleen voorlezen</label>
         </div>
       </div>
       <div class="setting-group">
@@ -681,6 +689,7 @@
   let canCorrect = false; // alleen na 'Weet ik' kun je jezelf nog corrigeren
   let direction = "fwd";
   let soundMode = "off";
+  let advanceGen = 0;        // elke sprong maakt een nog lopende automatische sprong ongeldig
   // item -> { fwd, rev } met per richting { g, f, s } en optioneel x:
   //   g = aantal_goed, f = aantal rondes achter elkaar fout, s = ronde waarvoor het woord staat ingepland,
   //   x = true als het woord op 'niet meer oefenen' staat en dus buiten slim oefenen blijft.
@@ -1105,6 +1114,18 @@
     return el ? el.value : "off";
   }
 
+  function isListenMode() {
+    return soundMode === "listen";
+  }
+
+  // 'Alleen voorlezen' leest altijd beide talen voor: in de richting Nederlands -> vreemde taal
+  // zou er anders niets te horen zijn, en dan heeft die stand geen zin.
+  function shouldSpeak(lang) {
+    if (soundMode === "off") return false;
+    if (soundMode === "both" || soundMode === "listen") return true;
+    return lang !== "nl";
+  }
+
   function promptWord(item) {
     return direction === "rev" ? item.nl : item.word;
   }
@@ -1130,6 +1151,8 @@
     skipped = 0;
     direction = directionOverride || getDirection();
     soundMode = getSoundMode();
+    cancelAutoAdvance();
+    screenQuiz.classList.toggle("listen-mode", isListenMode());
 
     screenStart.classList.add("hidden");
     screenEnd.classList.add("hidden");
@@ -1165,13 +1188,28 @@
     canCorrect = false;
     preAnswerState = null;
     btnNext.classList.add("hidden");
-    answerInput.focus();
+    // Het invoerveld is verborgen in 'Alleen voorlezen' en kan dan geen focus krijgen;
+    // 'Weet ik' wel, zodat de toetsenbordflow Enter - Enter per woord blijft.
+    if (isListenMode()) btnKnow.focus(); else answerInput.focus();
 
-    if (soundMode !== "off") {
-      const lang = promptLang(item);
-      if (soundMode === "both" || (soundMode === "foreign" && lang !== "nl")) {
-        speak(promptWord(item), lang);
-      }
+    if (shouldSpeak(promptLang(item))) {
+      speak(promptWord(item), promptLang(item));
+    }
+  }
+
+  // Elke sprong (met de hand of vanzelf) maakt een nog lopende automatische sprong ongeldig,
+  // zodat een vangnet-timer of de 'onend' van een afgebroken zin niet alsnog doorklikt.
+  function cancelAutoAdvance() {
+    advanceGen += 1;
+  }
+
+  function goToNextItem() {
+    cancelAutoAdvance();
+    currentIndex += 1;
+    if (currentIndex >= playlist.length) {
+      showEndScreen();
+    } else {
+      showCurrentItem();
     }
   }
 
@@ -1212,15 +1250,36 @@
     return voices.find((v) => v.lang && v.lang.toLowerCase().startsWith(prefix)) || null;
   }
 
-  function speak(text, lang) {
-    if (!speechSupported || !text) return;
+  function speak(text, lang, onDone) {
+    if (!speechSupported || !text) return false;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     const tag = toBcp47(lang);
     utterance.lang = tag;
     const voice = pickVoiceForLang(tag);
     if (voice) utterance.voice = voice;
+    if (onDone) {
+      utterance.onend = onDone;
+      utterance.onerror = onDone;
+    }
     window.speechSynthesis.speak(utterance);
+    return true;
+  }
+
+  const AUTO_ADVANCE_SILENT_MS = 900;  // niets te horen: toch even wachten voor het ritme
+  const AUTO_ADVANCE_MAX_MS = 6000;    // vangnet: 'onend' komt niet in elke browser
+
+  // Spreekt het antwoord uit en springt door zodra dat klaar is.
+  function speakAnswerThenAdvance(text, lang) {
+    const gen = advanceGen;
+    let fired = false;
+    const go = () => {
+      if (fired || gen !== advanceGen) return; // al doorgesprongen, of met de hand
+      fired = true;
+      goToNextItem();
+    };
+    const spoke = shouldSpeak(lang) && speak(text, lang, go);
+    window.setTimeout(go, spoke ? AUTO_ADVANCE_MAX_MS : AUTO_ADVANCE_SILENT_MS);
   }
 
   btnSpeak.addEventListener("click", () => {
@@ -1231,6 +1290,10 @@
   // ---------- Answer handling ----------
   function markAnswered() {
     answered = true;
+    // In 'Alleen voorlezen' blijft het scherm staan zoals het staat: geen antwoord in beeld,
+    // geen 'Volgende', en de knoppen vergrijzen niet tijdens de korte pauze. Verdere klikken
+    // vangt de 'answered'-controle hierboven af.
+    if (isListenMode()) return;
     answerInput.disabled = true;
     btnCheck.disabled = true;
     btnKnow.disabled = true;
@@ -1301,14 +1364,14 @@
     scoreText.textContent = `Score: ${score}`;
     markAnswered();
 
-    canCorrect = Boolean(fromKnow) && correct;
+    // In 'Alleen voorlezen' is er geen moment meer om te corrigeren: hij springt vanzelf door.
+    canCorrect = Boolean(fromKnow) && correct && !isListenMode();
     if (canCorrect) showAnswerActions(item);
 
-    if (soundMode !== "off") {
-      const lang = answerLang(item);
-      if (soundMode === "both" || (soundMode === "foreign" && lang !== "nl")) {
-        speak(answerText, lang);
-      }
+    if (isListenMode()) {
+      speakAnswerThenAdvance(answerText, answerLang(item));
+    } else if (shouldSpeak(answerLang(item))) {
+      speak(answerText, answerLang(item));
     }
   }
 
@@ -1346,12 +1409,7 @@
     if (answered) return;
     skipped += 1;
     recordSkip(currentItem());
-    currentIndex += 1;
-    if (currentIndex >= playlist.length) {
-      showEndScreen();
-    } else {
-      showCurrentItem();
-    }
+    goToNextItem();
   });
 
   answerInput.addEventListener("keydown", (e) => {
@@ -1390,14 +1448,7 @@
     updateExcludeLabel(item);
   });
 
-  btnNext.addEventListener("click", () => {
-    currentIndex += 1;
-    if (currentIndex >= playlist.length) {
-      showEndScreen();
-    } else {
-      showCurrentItem();
-    }
-  });
+  btnNext.addEventListener("click", goToNextItem);
 
   // ---------- End screen ----------
   function showEndScreen() {
@@ -1669,6 +1720,8 @@
   btnSmartPractice.addEventListener("click", () => startSmartRound());
 
   function goToStartScreen() {
+    cancelAutoAdvance();
+    if (speechSupported) window.speechSynthesis.cancel();
     screenEnd.classList.add("hidden");
     screenQuiz.classList.add("hidden");
     screenStart.classList.remove("hidden");
