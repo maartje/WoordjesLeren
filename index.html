@@ -419,10 +419,10 @@
     gap: 16px;
   }
   .mistake-row:last-child { border-bottom: none; }
-  .mistake-fr-wrap { display: flex; align-items: baseline; gap: 8px; }
+  .mistake-prompt-wrap { display: flex; align-items: baseline; gap: 8px; }
   .mistake-cross { color: var(--bad); font-weight: 700; }
-  .mistake-fr { color: var(--text); }
-  .mistake-nl { color: var(--muted); text-align: right; }
+  .mistake-prompt { color: var(--text); }
+  .mistake-answer { color: var(--muted); text-align: right; }
   .no-mistakes {
     text-align: center;
     color: var(--good);
@@ -2332,10 +2332,11 @@
 
     mistakesList.innerHTML = mistakes
       .map((m) => {
-        const nlPart = answersRevealed
-          ? `<span class="mistake-nl">${escapeHtml(m.nl)}</span>`
+        // Zelfde kant op als tijdens het oefenen: links wat gevraagd werd, rechts het antwoord.
+        const answerPart = answersRevealed
+          ? `<span class="mistake-answer">${escapeHtml(answerWord(m))}</span>`
           : "";
-        return `<div class="mistake-row"><span class="mistake-fr-wrap"><span class="mistake-cross">&#10007;</span><span class="mistake-fr">${escapeHtml(m.word)}</span></span>${nlPart}</div>`;
+        return `<div class="mistake-row"><span class="mistake-prompt-wrap"><span class="mistake-cross">&#10007;</span><span class="mistake-prompt">${escapeHtml(promptWord(m))}</span></span>${answerPart}</div>`;
       })
       .join("");
   }
