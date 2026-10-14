@@ -248,10 +248,31 @@
   }
   input[type="text"]:focus { border-color: var(--accent); }
   input[type="text"]:disabled { background: #f7f8fb; color: var(--muted); }
+  /* Het pijltje zit in het invoerveld: bevestigen hoort bij het typen. Onder het veld blijven
+     alleen de twee uitwegen over. De padding-right hoort bij dit ene veld, niet bij de
+     algemene input-regel: die geldt ook voor het bewerkscherm. */
+  .answer-wrap { position: relative; }
+  .answer-wrap input[type="text"] { padding-right: 56px; }
+  .btn-submit {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    flex: none;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 50%;
+  }
+  .btn-submit svg { width: 20px; height: 20px; }
   /* 'Alleen voorlezen': je typt niet en je leest niet mee. Het scherm blijft van woord tot
      woord hetzelfde; alles wat er na een antwoord bij zou komen hoor je in plaats daarvan. */
-  #screen-quiz.listen-mode #answer-input,
-  #screen-quiz.listen-mode #btn-check,
+  #screen-quiz.listen-mode .answer-wrap,
   #screen-quiz.listen-mode #feedback,
   #screen-quiz.listen-mode #answer-actions,
   #screen-quiz.listen-mode #btn-next { display: none; }
@@ -808,9 +829,16 @@
         </svg>
       </button>
     </div>
-    <input type="text" id="answer-input" autocomplete="off" placeholder="Typ de vertaling...">
+    <div class="answer-wrap">
+      <input type="text" id="answer-input" autocomplete="off" placeholder="Typ de vertaling...">
+      <button class="btn-submit" id="btn-check" type="button" aria-label="Antwoord controleren" title="Antwoord controleren">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M5 12h12"/><path d="M12.5 6.5 19 12l-6.5 5.5"/>
+        </svg>
+      </button>
+    </div>
     <div class="buttons">
-      <button class="btn-check" id="btn-check">Check</button>
       <button class="btn-know" id="btn-know">Weet ik</button>
       <button class="btn-dontknow" id="btn-dontknow">Weet ik niet</button>
     </div>
