@@ -715,20 +715,21 @@
         <!-- Deze twee sturen alleen de selectie van "Slim oefenen"; de instellingen erboven
              gelden voor elke ronde. -->
         <div class="settings-subtitle">Slim oefenen</div>
-        <label class="setting-label" for="sel-max-round">Max. woorden per ronde<span class="hint-icon" tabindex="0" title="Een hoger getal geeft meer herhaling van bekende woorden; nieuwe woorden krijgen daarbij dus minder focus.">?</span></label>
-        <select class="setting-select" id="sel-max-round">
-          <option value="10" selected>10</option>
-          <option value="20">20</option>
-          <option value="30">30</option>
-          <option value="all">Alle woorden</option>
-        </select>
-
-        <label class="setting-label" for="sel-max-wrong-skipped">Max. foute/overgeslagen<span class="hint-icon" tabindex="0" title="Maximaal aantal onbekende woorden waarop de focus ligt. Mensen kunnen typisch niet meer dan 5 tot 10 nieuwe woorden in een keer leren.">?</span></label>
+        <label class="setting-label" for="sel-max-wrong-skipped">Max. foute/nieuwe woorden<span class="hint-icon" tabindex="0" title="Maximaal aantal onbekende woorden waarop de focus ligt. Mensen kunnen typisch niet meer dan 5 tot 10 nieuwe woorden in een keer leren.">?</span></label>
         <select class="setting-select" id="sel-max-wrong-skipped">
           <option value="5" selected>5</option>
           <option value="7">7</option>
           <option value="9">9</option>
           <option value="10">10</option>
+        </select>
+
+        <label class="setting-label" for="sel-max-round">Max. woorden per ronde<span class="hint-icon" tabindex="0" title="Een hoger getal geeft meer herhaling van bekende woorden; nieuwe woorden krijgen daarbij dus minder focus. Met &quot;= Max. foute/nieuwe&quot; oefen je alleen onbekende woorden, zolang er genoeg van zijn.">?</span></label>
+        <select class="setting-select" id="sel-max-round">
+          <option value="same">= Max. foute/nieuwe</option>
+          <option value="10" selected>10</option>
+          <option value="20">20</option>
+          <option value="30">30</option>
+          <option value="all">Alle woorden</option>
         </select>
       </div>
     </section>
@@ -1646,15 +1647,21 @@
     return selMaxRound.value;
   }
 
-  // Plafond voor foute woorden en voor foute + overgeslagen woorden samen: hetzelfde getal.
+  // Plafond voor alles wat je nog niet kent samen: foute, overgeslagen en nieuwe woorden.
+  // Heet in de instellingen "Max. foute/nieuwe woorden"; overgeslagen woorden tellen mee.
   function getMaxWrongSkipped() {
     return Number(selMaxWrongSkipped.value);
   }
 
-  // "alle" betekent: geen plafond. Infinity werkt gewoon in Math.min en Array#slice.
+  // "all" betekent: geen plafond. Infinity werkt gewoon in Math.min en Array#slice.
+  // "same" maakt de ronde precies zo groot als het quotum voor onbekende woorden: zolang er
+  // genoeg foute, overgeslagen en nieuwe woorden zijn vullen die de hele ronde, en komt er
+  // geen herhaling van bekende woorden bij. Zijn er te weinig, dan vult de planning aan.
   function getMaxRoundSize() {
     const value = getMaxRoundValue();
-    return value === "all" ? Infinity : Number(value);
+    if (value === "all") return Infinity;
+    if (value === "same") return getMaxWrongSkipped();
+    return Number(value);
   }
 
   function hasDeck() {
