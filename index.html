@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Woordjes oefenen</title>
+<!-- Favicon: hetzelfde logo als in de kaart, inline zodat de app een enkel bestand blijft. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2040%2040'%3E%3Cdefs%3E%3ClinearGradient%20id='g'%20x1='0'%20y1='0'%20x2='1'%20y2='1'%3E%3Cstop%20offset='0'%20stop-color='%233b6df0'/%3E%3Cstop%20offset='1'%20stop-color='%232851c9'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20width='40'%20height='40'%20rx='11'%20fill='url(%23g)'/%3E%3Cpath%20d='M9%2013.5L15.5%2027L20%2018.5L24.5%2027L31%2013.5'%20fill='none'%20stroke='%23fff'%20stroke-width='3.2'%20stroke-linecap='round'%20stroke-linejoin='round'/%3E%3C/svg%3E">
 <style>
   :root {
     --bg: #f4f6fb;
@@ -271,6 +273,17 @@
     flex: 1 1 auto;
   }
   button:disabled { opacity: 0.5; cursor: default; }
+  /* Het logo is een knop: terug naar het startscherm. Alleen terugdraaien wat de algemene
+     button-regel aan vorm en vulling geeft; de hover-helderheid daarvan blijft juist staan. */
+  .logo-home {
+    display: block;
+    flex: none;
+    padding: 0;
+    background: none;
+    border-radius: 12px;
+    line-height: 0;
+    margin-bottom: 20px;
+  }
   button:not(:disabled):hover { filter: brightness(1.08); }
   .btn-check { background: var(--accent); color: #fff; }
   .btn-know { background: #e7edfc; color: var(--accent-dark); }
@@ -670,6 +683,21 @@
 
 <div class="card" id="card">
 
+  <!-- Vaste kop boven alle schermen: het logo is tegelijk de weg terug naar het startscherm. -->
+  <button class="logo-home" id="btn-logo" type="button" title="Naar startscherm" aria-label="Naar startscherm">
+    <svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true" focusable="false">
+      <defs>
+        <linearGradient id="logo-grad" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#3b6df0"/>
+          <stop offset="1" stop-color="#2851c9"/>
+        </linearGradient>
+      </defs>
+      <rect width="40" height="40" rx="11" fill="url(#logo-grad)"/>
+      <path d="M9 13.5 L15.5 27 L20 18.5 L24.5 27 L31 13.5" fill="none" stroke="#fff"
+            stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </button>
+
   <!-- Startscherm: bestand(en) kiezen -->
   <div id="screen-start">
     <h1>Woordjes oefenen</h1>
@@ -780,13 +808,12 @@
         </svg>
       </button>
     </div>
-    <input type="text" id="answer-input" autocomplete="off" placeholder="Typ de Nederlandse vertaling...">
+    <input type="text" id="answer-input" autocomplete="off" placeholder="Typ de vertaling...">
     <div class="buttons">
       <button class="btn-check" id="btn-check">Check</button>
       <button class="btn-know" id="btn-know">Weet ik</button>
       <button class="btn-dontknow" id="btn-dontknow">Weet ik niet</button>
     </div>
-    <button class="btn-tostart-link" id="btn-to-start-quiz" type="button">Naar startscherm</button>
     <div class="feedback" id="feedback"></div>
     <div class="answer-actions hidden" id="answer-actions">
       <button class="btn-wrong-after-all" id="btn-wrong-after-all" type="button">Toch fout</button>
@@ -813,8 +840,6 @@
         <button class="btn-split-toggle" id="btn-end-menu" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Meer oefenopties"></button>
         <div class="split-menu hidden" id="end-menu" role="menu"></div>
       </div>
-
-      <button class="btn-tostart-link" id="btn-to-start" type="button">Naar startscherm</button>
     </div>
   </div>
 
@@ -902,8 +927,7 @@
   const histogramEl = document.getElementById("stats-histogram");
   const emptyRoundEl = document.getElementById("empty-round");
   const btnToggleAnswers = document.getElementById("btn-toggle-answers");
-  const btnToStart = document.getElementById("btn-to-start");
-  const btnToStartQuiz = document.getElementById("btn-to-start-quiz");
+  const btnLogo = document.getElementById("btn-logo");
   const selDirection = document.getElementById("sel-direction");
   const selSoundMode = document.getElementById("sel-sound-mode");
   const selOrderMode = document.getElementById("sel-order-mode");
@@ -953,6 +977,9 @@
     for (const screen of [screenStart, screenQuiz, screenEnd, screenEdit]) {
       screen.classList.toggle("hidden", screen !== target);
     }
+    // In het bewerkscherm zou een klik op het logo je niet-opgeslagen wijzigingen weggooien;
+    // daar brengen "Annuleren" en "Opslaan" je zelf terug.
+    btnLogo.classList.toggle("hidden", target === screenEdit);
   }
 
   // ---------- Voortgang opslaan (localStorage) ----------
@@ -2328,8 +2355,7 @@
     refreshResumeBanner();
   }
 
-  btnToStart.addEventListener("click", goToStartScreen);
-  btnToStartQuiz.addEventListener("click", goToStartScreen);
+  btnLogo.addEventListener("click", goToStartScreen);
 
   // ---------- Vorige sessie hervatten ----------
   function loadPendingDeck(data) {
