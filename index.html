@@ -99,37 +99,78 @@
     font-size: 0.9rem;
     line-height: 1.4;
   }
-  .resume-banner {
-    margin-bottom: 20px;
-    background: #f0f3fb;
-    border: 1px solid #d3ddf7;
-    border-radius: 10px;
-    padding: 14px 16px;
-  }
-  .resume-info {
-    font-size: 0.9rem;
+  /* ---------- Starten: statusregel + split-button ---------- */
+  .start-actions { margin-top: 20px; }
+  .start-info {
+    font-size: 0.85rem;
     line-height: 1.4;
-    margin-bottom: 10px;
+    color: var(--muted);
+    margin-bottom: 8px;
   }
-  .resume-actions {
+  /* Eén knop met een pijltje ernaast: de hoofdactie staat voorop, de andere twee
+     zitten in het menu zodat het startscherm maar één blikvanger heeft. */
+  .split-button {
+    position: relative;
+    display: flex;
+  }
+  .btn-split-main {
+    flex: 1 1 auto;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 10px 0 0 10px;
+  }
+  .btn-split-toggle {
+    flex: 0 0 auto;
+    width: 44px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent);
+    color: #fff;
+    border-radius: 0 10px 10px 0;
+    box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.35);
+  }
+  /* Driehoekje dat meedraait als het menu opengaat, net als bij .foldout-title. */
+  .btn-split-toggle::after {
+    content: "";
+    width: 0;
+    height: 0;
+    border-top: 5px solid currentColor;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    transition: transform 0.15s ease;
+  }
+  .btn-split-toggle[aria-expanded="true"]::after { transform: rotate(180deg); }
+  /* Zonder voortgang is er niets te kiezen: dan staat de hoofdknop er alleen voor. */
+  .split-button:has(.btn-split-toggle.hidden) .btn-split-main { border-radius: 10px; }
+  .split-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    min-width: 200px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(20, 30, 60, 0.12);
+    padding: 6px;
+    z-index: 10;
   }
-  .resume-actions-row {
-    display: flex;
-    gap: 8px;
+  .split-menu button {
+    flex: 0 0 auto;
+    text-align: left;
+    background: none;
+    color: var(--text);
+    font-size: 0.9rem;
+    padding: 9px 12px;
+    border-radius: 8px;
   }
-  .resume-actions button {
-    flex: 1 1 0;
-    min-width: 0; /* op een smal scherm liever even smal met omgebroken tekst dan ongelijk */
-    font-size: 0.85rem;
-    padding: 8px 14px;
-  }
-  .btn-resume { background: var(--accent); color: #fff; border: 1.5px solid transparent; }
-  .btn-dismiss-resume { background: #fff; color: var(--accent-dark); border: 1.5px solid #d3ddf7; }
-  /* Wist je voortgang, dus bewust rustiger dan de twee knoppen erboven. */
-  .btn-new-session { background: var(--muted); color: #fff; }
+  .split-menu button:not(:disabled):hover,
+  .split-menu button:focus-visible { background: #f0f3fb; filter: none; }
+  /* Wist je voortgang, dus bewust rustiger dan de andere optie. */
+  #btn-clear-progress { color: var(--muted); }
   .confirm-dialog {
     border: 1px solid var(--border);
     border-radius: 16px;
@@ -466,29 +507,18 @@
   .loaded-file-name {
     color: var(--text);
   }
+  /* Label links, dropdown rechts; alle dropdowns lijnen zo onder elkaar uit. De
+     dropdownkolom krijgt de breedte van zijn langste optie, zodat die niet afgekapt
+     wordt, en het label neemt wat overblijft. */
   .settings {
-    margin-top: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, max-content);
+    align-items: center;
+    gap: 12px 16px;
   }
   .setting-label {
     font-weight: 700;
     font-size: 0.9rem;
-    margin-bottom: 6px;
-  }
-  .setting-options {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px 18px;
-    font-size: 0.9rem;
-    color: var(--text);
-  }
-  .setting-options label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
   }
   /* Uitklapbare sectie met een eigen omlijsting; gebruikt voor de instellingen van
      "Slim oefenen" en voor de tips. Beide staan standaard dicht zodat het startscherm kort blijft. */
@@ -535,9 +565,19 @@
     gap: 14px;
     margin-top: 14px;
   }
-  /* De tips staan los van de instellingen, dus met dezelfde tussenruimte als binnen .settings. */
+  /* Bestanden, instellingen en tips zijn drie aparte stappen; de ruimte ertussen
+     en een rustige kop erboven houden het startscherm overzichtelijk. */
+  .section + .section { margin-top: 30px; }
+  .section-title {
+    margin: 0 0 14px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
   #tips {
-    margin-top: 14px;
+    margin-top: 30px;
   }
   .tips-list {
     margin: 0;
@@ -573,7 +613,8 @@
     font-weight: 400;
     padding: 8px 10px;
   }
-  .edit-field select {
+  .edit-field select,
+  .setting-select {
     font-family: inherit;
     font-size: 0.95rem;
     font-weight: 400;
@@ -585,7 +626,9 @@
     outline: none;
     cursor: pointer;
   }
-  .edit-field select:focus { border-color: var(--accent); }
+  .edit-field select:focus,
+  .setting-select:focus { border-color: var(--accent); }
+  .setting-select { width: 100%; }
   .edit-section-title {
     font-weight: 700;
     font-size: 0.9rem;
@@ -619,6 +662,15 @@
     color: var(--muted);
     line-height: 1.4;
   }
+  /* Zodra de kaart smaller wordt dan de kaartbreedte gaan label en dropdown onder
+     elkaar: naast elkaar blijft er dan te weinig over voor de labeltekst. */
+  @media (max-width: 620px) {
+    .settings {
+      grid-template-columns: 1fr;
+      gap: 6px 0;
+    }
+    .settings .setting-label + .setting-select { margin-bottom: 8px; }
+  }
   /* Op een smal scherm zijn twee velden naast elkaar te krap voor hele zinnen. */
   @media (max-width: 520px) {
     .edit-row {
@@ -639,74 +691,70 @@
   <div id="screen-start">
     <h1>Woordjes oefenen</h1>
     <p class="subtitle">Kies één of meerdere lesbestanden (.yaml) om woorden te oefenen, van elke vreemde taal naar het Nederlands en andersom.</p>
-    <div class="resume-banner hidden" id="resume-banner">
-      <div class="resume-info" id="resume-info"></div>
-      <div class="resume-actions">
-        <div class="resume-actions-row" id="resume-actions-row">
-          <button class="btn-resume" id="btn-resume" type="button">Slim oefenen</button>
-          <button class="btn-dismiss-resume" id="btn-practice-all-start" type="button">Oefen alle woorden</button>
-        </div>
-        <button class="btn-new-session" id="btn-clear-progress" type="button">Start nieuwe sessie</button>
+    <section class="section">
+      <h2 class="section-title">Lesbestanden</h2>
+      <div class="file-actions">
+        <label class="file-label" for="file-input" id="file-label">Kies lesbestand(en)</label>
+        <span class="hint-icon" tabindex="0" title="Selecteer een of meer lesbestanden in .yaml formaat">?</span>
+        <button class="file-label btn-new-file" id="btn-new-file" type="button">Maak nieuw lesbestand</button>
       </div>
-    </div>
-    <div class="file-actions">
-      <label class="file-label" for="file-input" id="file-label">Kies lesbestand(en)</label>
-      <span class="hint-icon" tabindex="0" title="Selecteer een of meer lesbestanden in .yaml formaat">?</span>
-      <button class="file-label btn-new-file" id="btn-new-file" type="button">Maak nieuw lesbestand</button>
-    </div>
-    <input type="file" id="file-input" accept=".yaml,.yml" multiple>
-    <div class="file-list" id="file-list"></div>
-    <div class="warning hidden" id="start-warning"></div>
-    <div class="settings">
-      <div class="setting-group">
-        <div class="setting-label">Richting</div>
-        <div class="setting-options">
-          <label><input type="radio" name="direction" value="fwd" checked> Vreemde taal &rarr; Nederlands</label>
-          <label><input type="radio" name="direction" value="rev"> Nederlands &rarr; Vreemde taal</label>
-        </div>
-      </div>
-      <div class="setting-group">
-        <div class="setting-label">Automatisch voorlezen<span class="hint-icon" tabindex="0" title="Bij &ldquo;Alleen voorlezen&rdquo; typ je niets: je hoort het woord, drukt op &ldquo;Weet ik&rdquo; of &ldquo;Weet ik niet&rdquo;, en na het antwoord gaat hij vanzelf door.">?</span></div>
-        <div class="setting-options">
-          <label><input type="radio" name="sound-mode" value="off"> Uit</label>
-          <label><input type="radio" name="sound-mode" value="foreign" checked> Vreemde taal</label>
-          <label><input type="radio" name="sound-mode" value="both"> Beide talen</label>
-          <label><input type="radio" name="sound-mode" value="listen"> Alleen voorlezen</label>
-        </div>
-      </div>
-      <div class="setting-group">
-        <div class="setting-label">Volgorde</div>
-        <div class="setting-options">
-          <label><input type="radio" name="order-mode" value="random" checked> Willekeurige volgorde</label>
-          <label><input type="radio" name="order-mode" value="original"> Originele volgorde</label>
-        </div>
-      </div>
-      <!-- Deze twee instellingen sturen alleen de selectie van "Slim oefenen"; de instellingen
-           erboven gelden voor elke ronde. -->
-      <details class="foldout" id="smart-settings">
-        <summary class="foldout-title">Instellingen voor &ldquo;Slim oefenen&rdquo;<span class="hint-icon" tabindex="0" title="Deze twee instellingen bepalen alleen hoe &ldquo;Slim oefenen&rdquo; zijn ronde samenstelt. &ldquo;Oefen alle woorden&rdquo; neemt altijd het hele deck, en een foutenronde altijd alle woorden die nog fout staan.">?</span></summary>
-        <div class="foldout-body">
-          <div class="setting-group">
-            <div class="setting-label">Maximaal aantal woorden per ronde</div>
-            <div class="setting-options">
-              <label><input type="radio" name="max-round" value="10" checked> 10</label>
-              <label><input type="radio" name="max-round" value="20"> 20</label>
-              <label><input type="radio" name="max-round" value="30"> 30</label>
-              <label><input type="radio" name="max-round" value="all"> Alle woorden</label>
-            </div>
-          </div>
-          <div class="setting-group">
-            <div class="setting-label">Maximaal aantal foute/overgeslagen woorden</div>
-            <div class="setting-options">
-              <label><input type="radio" name="max-wrong-skipped" value="5" checked> 5</label>
-              <label><input type="radio" name="max-wrong-skipped" value="7"> 7</label>
-              <label><input type="radio" name="max-wrong-skipped" value="9"> 9</label>
-              <label><input type="radio" name="max-wrong-skipped" value="10"> 10</label>
-            </div>
+      <input type="file" id="file-input" accept=".yaml,.yml" multiple>
+      <div class="file-list" id="file-list"></div>
+      <div class="warning hidden" id="start-warning"></div>
+      <div class="start-actions hidden" id="start-actions">
+        <div class="start-info" id="resume-info"></div>
+        <div class="split-button">
+          <button class="btn-split-main" id="btn-resume" type="button">Slim oefenen</button>
+          <button class="btn-split-toggle hidden" id="btn-start-menu" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Meer oefenopties"></button>
+          <div class="split-menu hidden" id="start-menu" role="menu">
+            <button type="button" role="menuitem" id="btn-practice-all-start">Oefen alle woorden</button>
+            <button type="button" role="menuitem" id="btn-clear-progress">Start nieuwe sessie</button>
           </div>
         </div>
-      </details>
-    </div>
+      </div>
+    </section>
+    <section class="section">
+      <h2 class="section-title">Instellingen</h2>
+      <div class="settings">
+        <label class="setting-label" for="sel-direction">Richting</label>
+        <select class="setting-select" id="sel-direction">
+          <option value="fwd" selected>Vreemde taal &rarr; Nederlands</option>
+          <option value="rev">Nederlands &rarr; Vreemde taal</option>
+        </select>
+
+        <label class="setting-label" for="sel-sound-mode">Automatisch voorlezen<span class="hint-icon" tabindex="0" title="Bij &ldquo;Alleen voorlezen&rdquo; typ je niets: je hoort het woord, drukt op &ldquo;Weet ik&rdquo; of &ldquo;Weet ik niet&rdquo;, en na het antwoord gaat hij vanzelf door.">?</span></label>
+        <select class="setting-select" id="sel-sound-mode">
+          <option value="off">Uit</option>
+          <option value="foreign" selected>Vreemde taal</option>
+          <option value="both">Beide talen</option>
+          <option value="listen">Alleen voorlezen</option>
+        </select>
+
+        <label class="setting-label" for="sel-order-mode">Volgorde</label>
+        <select class="setting-select" id="sel-order-mode">
+          <option value="random" selected>Willekeurige volgorde</option>
+          <option value="original">Originele volgorde</option>
+        </select>
+
+        <!-- Deze twee instellingen sturen alleen de selectie van "Slim oefenen"; de instellingen
+             erboven gelden voor elke ronde. Vandaar de uitleg in het vraagteken. -->
+        <label class="setting-label" for="sel-max-round">Max. woorden per ronde<span class="hint-icon" tabindex="0" title="Bepaalt alleen hoe &ldquo;Slim oefenen&rdquo; zijn ronde samenstelt. &ldquo;Oefen alle woorden&rdquo; neemt altijd het hele deck, en een foutenronde altijd alle woorden die nog fout staan.">?</span></label>
+        <select class="setting-select" id="sel-max-round">
+          <option value="10" selected>10</option>
+          <option value="20">20</option>
+          <option value="30">30</option>
+          <option value="all">Alle woorden</option>
+        </select>
+
+        <label class="setting-label" for="sel-max-wrong-skipped">Max. foute/overgeslagen<span class="hint-icon" tabindex="0" title="Bepaalt alleen hoe &ldquo;Slim oefenen&rdquo; zijn ronde samenstelt: zoveel foute en overgeslagen woorden, aangevuld met woorden die weer aan de beurt zijn.">?</span></label>
+        <select class="setting-select" id="sel-max-wrong-skipped">
+          <option value="5" selected>5</option>
+          <option value="7">7</option>
+          <option value="9">9</option>
+          <option value="10">10</option>
+        </select>
+      </div>
+    </section>
     <!-- Achtergrond bij het oefenen: wat werkt, en hoe je dat met deze app doet. -->
     <details class="foldout" id="tips">
       <summary class="foldout-title">Tips: hoe onthoud je woordjes?</summary>
@@ -874,13 +922,18 @@
   const btnPracticeAll = document.getElementById("btn-practice-all");
   const btnToStart = document.getElementById("btn-to-start");
   const btnToStartQuiz = document.getElementById("btn-to-start-quiz");
-  const smartSettings = document.getElementById("smart-settings");
-  const resumeBanner = document.getElementById("resume-banner");
+  const selDirection = document.getElementById("sel-direction");
+  const selSoundMode = document.getElementById("sel-sound-mode");
+  const selOrderMode = document.getElementById("sel-order-mode");
+  const selMaxRound = document.getElementById("sel-max-round");
+  const selMaxWrongSkipped = document.getElementById("sel-max-wrong-skipped");
+  const startActions = document.getElementById("start-actions");
   const resumeInfo = document.getElementById("resume-info");
   const btnResume = document.getElementById("btn-resume");
+  const btnStartMenu = document.getElementById("btn-start-menu");
+  const startMenu = document.getElementById("start-menu");
   const btnClearProgress = document.getElementById("btn-clear-progress");
   const btnPracticeAllStart = document.getElementById("btn-practice-all-start");
-  const resumeActionsRow = document.getElementById("resume-actions-row");
   const btnNewFile = document.getElementById("btn-new-file");
   const editTitleEl = document.getElementById("edit-title");
   const editFileNameEl = document.getElementById("edit-file-name");
@@ -930,29 +983,11 @@
   const STORAGE_KEY = "woordjesleren:progress:v1";
   let storedMeta = {}; // { fileNames, lastRound } - aangevuld via persistState()
 
-  function setDirectionRadio(value) {
-    const el = document.querySelector(`input[name="direction"][value="${value}"]`);
-    if (el) el.checked = true;
-  }
-
-  function setSoundModeRadio(value) {
-    const el = document.querySelector(`input[name="sound-mode"][value="${value}"]`);
-    if (el) el.checked = true;
-  }
-
-  function setOrderModeRadio(value) {
-    const el = document.querySelector(`input[name="order-mode"][value="${value}"]`);
-    if (el) el.checked = true;
-  }
-
-  function setMaxRoundRadio(value) {
-    const el = document.querySelector(`input[name="max-round"][value="${value}"]`);
-    if (el) el.checked = true;
-  }
-
-  function setMaxWrongSkippedRadio(value) {
-    const el = document.querySelector(`input[name="max-wrong-skipped"][value="${value}"]`);
-    if (el) el.checked = true;
+  // Een onbekende opgeslagen waarde negeren: anders zou de dropdown leeg komen te staan
+  // in plaats van op zijn standaardkeuze.
+  function setSelect(el, value) {
+    const wanted = String(value);
+    if (Array.prototype.some.call(el.options, (opt) => opt.value === wanted)) el.value = wanted;
   }
 
   function itemKey(item) {
@@ -1039,7 +1074,6 @@
         orderMode: getOrderMode(),
         maxRound: getMaxRoundValue(),
         maxWrongSkipped: getMaxWrongSkipped(),
-        smartSettingsOpen: smartSettings.open,
         roundNumber: normalizeRoundNumber(roundNumber),
         words: combinedWords,
         sentences: combinedSentences,
@@ -1071,33 +1105,27 @@
   function refreshResumeBanner() {
     const stored = loadStoredState();
     if (stored && stored.direction) {
-      setDirectionRadio(stored.direction);
+      setSelect(selDirection, stored.direction);
     }
     if (stored && stored.soundMode) {
-      setSoundModeRadio(stored.soundMode);
+      setSelect(selSoundMode, stored.soundMode);
     }
     if (stored && stored.orderMode) {
-      setOrderModeRadio(stored.orderMode);
+      setSelect(selOrderMode, stored.orderMode);
     }
     if (stored && stored.maxRound) {
-      setMaxRoundRadio(stored.maxRound);
-    }
-    if (stored && typeof stored.smartSettingsOpen === "boolean") {
-      smartSettings.open = stored.smartSettingsOpen;
+      setSelect(selMaxRound, stored.maxRound);
     }
     // maxNewWrong is de oude sleutel: meelezen zodat een ingestelde waarde niet verdwijnt.
     const storedWrongSkipped = stored && (stored.maxWrongSkipped || stored.maxNewWrong);
     if (storedWrongSkipped) {
-      setMaxWrongSkippedRadio(String(storedWrongSkipped));
+      setSelect(selMaxWrongSkipped, storedWrongSkipped);
     }
     if (!stored || !hasDeck()) {
-      resumeBanner.classList.add("hidden");
+      startActions.classList.add("hidden");
       return;
     }
 
-    const fileText = stored.fileNames && stored.fileNames.length
-      ? stored.fileNames.join(", ")
-      : "eerdere lesbestanden";
     // Zonder voortgang in deze richting is "Slim oefenen" nog zinloos en doet
     // "Oefen alle woorden" hetzelfde als "Start nieuwe sessie": één knop volstaat.
     // De score hoort bij diezelfde voortgang: die van een deck dat je daarna hebt
@@ -1107,11 +1135,13 @@
     const roundText = lastRound
       ? `${lastRound.score}/${lastRound.total} goed, ${formatRelativeTime(lastRound.at)}`
       : "nog niet geoefend";
-    resumeInfo.textContent = `${fileText} — ${roundText}`;
-    btnResume.classList.toggle("hidden", !hasProgress);
-    btnPracticeAllStart.classList.toggle("hidden", !hasProgress);
-    resumeActionsRow.classList.toggle("hidden", !hasProgress);
-    resumeBanner.classList.remove("hidden");
+    // De bestandsnamen staan er vlak boven al in #file-list, dus hier alleen de ronde.
+    resumeInfo.textContent = roundText;
+    // Zonder voortgang valt er niets te kiezen: dan staat de hoofdknop er zonder menu.
+    btnResume.textContent = hasProgress ? "Slim oefenen" : "Start nieuwe sessie";
+    btnStartMenu.classList.toggle("hidden", !hasProgress);
+    openStartMenu(false);
+    startActions.classList.remove("hidden");
   }
 
   // ---------- Tiny YAML parser (tailored to the lesson file format) ----------
@@ -1639,19 +1669,16 @@
   }
 
   function getOrderMode() {
-    const el = document.querySelector('input[name="order-mode"]:checked');
-    return el ? el.value : "random";
+    return selOrderMode.value;
   }
 
   function getMaxRoundValue() {
-    const el = document.querySelector('input[name="max-round"]:checked');
-    return el ? el.value : "10";
+    return selMaxRound.value;
   }
 
   // Plafond voor foute woorden en voor foute + overgeslagen woorden samen: hetzelfde getal.
   function getMaxWrongSkipped() {
-    const el = document.querySelector('input[name="max-wrong-skipped"]:checked');
-    return el ? Number(el.value) : 5;
+    return Number(selMaxWrongSkipped.value);
   }
 
   // "alle" betekent: geen plafond. Infinity werkt gewoon in Math.min en Array#slice.
@@ -1693,13 +1720,11 @@
   }
 
   function getDirection() {
-    const el = document.querySelector('input[name="direction"]:checked');
-    return el ? el.value : "fwd";
+    return selDirection.value;
   }
 
   function getSoundMode() {
-    const el = document.querySelector('input[name="sound-mode"]:checked');
-    return el ? el.value : "foreign";
+    return selSoundMode.value;
   }
 
   function isListenMode() {
@@ -2329,16 +2354,41 @@
     renderFileList();
   }
 
+  // ---------- Split-button op het startscherm ----------
+  function openStartMenu(open) {
+    startMenu.classList.toggle("hidden", !open);
+    btnStartMenu.setAttribute("aria-expanded", String(open));
+  }
+
+  btnStartMenu.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openStartMenu(startMenu.classList.contains("hidden"));
+  });
+
+  // Klikken buiten het menu of Escape sluit het weer. Een klik in het menu zelf niet:
+  // die moet eerst bij de knop eronder aankomen.
+  startMenu.addEventListener("click", (e) => e.stopPropagation());
+  document.addEventListener("click", () => openStartMenu(false));
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") openStartMenu(false);
+  });
+
   btnResume.addEventListener("click", () => {
     if (!hasDeck()) return;
-    // Bij een lege ronde blijft de banner staan, zodat 'Oefen alle woorden' bereikbaar blijft.
-    if (startSmartRound()) resumeBanner.classList.add("hidden");
+    // Zonder voortgang valt er niets slims te kiezen en niets te wissen: gewoon beginnen.
+    if (!hasProgressFor(getDirection())) {
+      startNewSession();
+      return;
+    }
+    // Bij een lege ronde blijft de knop staan, zodat 'Oefen alle woorden' bereikbaar blijft.
+    if (startSmartRound()) startActions.classList.add("hidden");
   });
 
   // Hele lijst oefenen vanaf het startscherm: geen reset, en het ronde-maximum geldt hier niet.
   btnPracticeAllStart.addEventListener("click", () => {
+    openStartMenu(false);
     if (!hasDeck()) return;
-    resumeBanner.classList.add("hidden");
+    startActions.classList.add("hidden");
 
     direction = getDirection();
     startQuiz(combinedWords, combinedSentences);
@@ -2348,13 +2398,14 @@
   function startNewSession() {
     direction = getDirection();
     resetCurrentDirectionStats();
-    resumeBanner.classList.add("hidden");
+    startActions.classList.add("hidden");
 
     startSmartRound();
     persistState({ fileNames: storedMeta.fileNames });
   }
 
   btnClearProgress.addEventListener("click", () => {
+    openStartMenu(false);
     if (!hasDeck()) {
       refreshResumeBanner();
       return;
@@ -2379,19 +2430,14 @@
   }
 
   // Richting wijzigen laadt de statistieken van die richting (elke richting heeft zijn eigen statistieken).
-  document.querySelectorAll('input[name="direction"]').forEach((el) => {
-    el.addEventListener("change", () => {
-      direction = getDirection();
-      persistSettings();
-      refreshResumeBanner();
-    });
+  selDirection.addEventListener("change", () => {
+    direction = getDirection();
+    persistSettings();
+    refreshResumeBanner();
   });
 
-  document.querySelectorAll('input[name="sound-mode"], input[name="order-mode"], input[name="max-round"], input[name="max-wrong-skipped"]')
+  [selSoundMode, selOrderMode, selMaxRound, selMaxWrongSkipped]
     .forEach((el) => el.addEventListener("change", persistSettings));
-
-  // Open of dicht onthouden, zodat de sectie niet elke keer opnieuw dichtklapt.
-  smartSettings.addEventListener("toggle", persistSettings);
 
   // ---------- Init ----------
   // Het opgeslagen deck meteen inladen, zodat de bestandslijst, de bestandskiezer en
