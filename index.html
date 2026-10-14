@@ -100,18 +100,25 @@
     line-height: 1.4;
   }
   /* ---------- Starten: statusregel + split-button ---------- */
-  .start-actions { margin-top: 20px; }
+  /* Staat bovenaan, nog voor de secties: oefenen is de hoofdzaak, de bestandslijst en de
+     instellingen zijn wat je daarna pas nodig hebt. */
+  .start-actions { margin-bottom: 30px; }
   .start-info {
     font-size: 0.85rem;
     line-height: 1.4;
     color: var(--muted);
     margin-bottom: 8px;
   }
-  /* Eén knop met een pijltje ernaast: de hoofdactie staat voorop, de andere twee
-     zitten in het menu zodat het startscherm maar één blikvanger heeft. */
+  /* De split-button en het ?-icoon ernaast; op beide schermen hetzelfde blok. */
+  .split-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
   .split-button {
     position: relative;
     display: flex;
+    flex: 1 1 auto;
   }
   .btn-split-main {
     flex: 1 1 auto;
@@ -142,8 +149,6 @@
     transition: transform 0.15s ease;
   }
   .btn-split-toggle[aria-expanded="true"]::after { transform: rotate(180deg); }
-  /* Zonder voortgang is er niets te kiezen: dan staat de hoofdknop er alleen voor. */
-  .split-button:has(.btn-split-toggle.hidden) .btn-split-main { border-radius: 10px; }
   .split-menu {
     position: absolute;
     right: 0;
@@ -169,8 +174,11 @@
   }
   .split-menu button:not(:disabled):hover,
   .split-menu button:focus-visible { background: #f0f3fb; filter: none; }
-  /* Wist je voortgang, dus bewust rustiger dan de andere optie. */
-  #btn-clear-progress { color: var(--muted); }
+  /* Wist je voortgang, dus zet een grijs vlak hem apart van de oefenopties. Grijze tekst
+     zou te veel op een uitgeschakelde regel lijken, dus de tekst blijft gewoon zwart. */
+  .split-menu button[data-option="reset"] { background: #eceef3; }
+  .split-menu button[data-option="reset"]:not(:disabled):hover,
+  .split-menu button[data-option="reset"]:focus-visible { background: #dfe2ea; }
   .confirm-dialog {
     border: 1px solid var(--border);
     border-radius: 16px;
@@ -290,19 +298,6 @@
   .end-actions {
     margin-top: 20px;
   }
-  .primary-cta-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
-  .btn-primary-cta {
-    width: auto;
-    flex: 1 1 auto;
-    background: var(--accent);
-    color: #fff;
-    font-size: 1.05rem;
-    padding: 16px;
-  }
   .info-icon {
     flex: 0 0 auto;
     width: 24px;
@@ -318,14 +313,6 @@
     cursor: help;
     user-select: none;
   }
-  .secondary-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 16px;
-    flex-wrap: wrap;
-  }
-  .btn-mistakes { background: #e7edfc; color: var(--accent-dark); }
-  .btn-all { background: #fff; color: var(--accent-dark); border: 1.5px solid #d3ddf7; }
   .btn-tostart-link {
     display: block;
     width: 100%;
@@ -520,8 +507,8 @@
     font-weight: 700;
     font-size: 0.9rem;
   }
-  /* Uitklapbare sectie met een eigen omlijsting; gebruikt voor de instellingen van
-     "Slim oefenen" en voor de tips. Beide staan standaard dicht zodat het startscherm kort blijft. */
+  /* Uitklapbare sectie met een eigen omlijsting; gebruikt voor de tips, die standaard
+     dicht staan zodat het startscherm kort blijft. */
   .foldout {
     background: var(--card-bg);
     border: 1px solid var(--border);
@@ -565,7 +552,7 @@
     gap: 14px;
     margin-top: 14px;
   }
-  /* Bestanden, instellingen en tips zijn drie aparte stappen; de ruimte ertussen
+  /* Bestanden, instellingen en leerstrategieën zijn aparte stappen; de ruimte ertussen
      en een rustige kop erboven houden het startscherm overzichtelijk. */
   .section + .section { margin-top: 30px; }
   .section-title {
@@ -576,8 +563,8 @@
     text-transform: uppercase;
     color: var(--muted);
   }
-  #tips {
-    margin-top: 30px;
+  .foldout + .foldout {
+    margin-top: 10px;
   }
   .tips-list {
     margin: 0;
@@ -691,6 +678,18 @@
   <div id="screen-start">
     <h1>Woordjes oefenen</h1>
     <p class="subtitle">Kies één of meerdere lesbestanden (.yaml) om woorden te oefenen, van elke vreemde taal naar het Nederlands en andersom.</p>
+    <div class="start-actions hidden" id="start-actions">
+      <div class="start-info" id="resume-info"></div>
+      <!-- Menu-inhoud komt uit PRACTICE_OPTIONS: beide schermen bieden dezelfde opties. -->
+      <div class="split-row">
+        <div class="split-button">
+          <button class="btn-split-main" id="btn-start-main" type="button"></button>
+          <button class="btn-split-toggle" id="btn-start-menu" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Meer oefenopties"></button>
+          <div class="split-menu hidden" id="start-menu" role="menu"></div>
+        </div>
+        <span class="info-icon" id="start-hint" tabindex="0">?</span>
+      </div>
+    </div>
     <section class="section">
       <h2 class="section-title">Lesbestanden</h2>
       <div class="file-actions">
@@ -701,17 +700,6 @@
       <input type="file" id="file-input" accept=".yaml,.yml" multiple>
       <div class="file-list" id="file-list"></div>
       <div class="warning hidden" id="start-warning"></div>
-      <div class="start-actions hidden" id="start-actions">
-        <div class="start-info" id="resume-info"></div>
-        <div class="split-button">
-          <button class="btn-split-main" id="btn-resume" type="button">Slim oefenen</button>
-          <button class="btn-split-toggle hidden" id="btn-start-menu" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Meer oefenopties"></button>
-          <div class="split-menu hidden" id="start-menu" role="menu">
-            <button type="button" role="menuitem" id="btn-practice-all-start">Oefen alle woorden</button>
-            <button type="button" role="menuitem" id="btn-clear-progress">Start nieuwe sessie</button>
-          </div>
-        </div>
-      </div>
     </section>
     <section class="section">
       <h2 class="section-title">Instellingen</h2>
@@ -738,7 +726,7 @@
 
         <!-- Deze twee instellingen sturen alleen de selectie van "Slim oefenen"; de instellingen
              erboven gelden voor elke ronde. Vandaar de uitleg in het vraagteken. -->
-        <label class="setting-label" for="sel-max-round">Max. woorden per ronde<span class="hint-icon" tabindex="0" title="Bepaalt alleen hoe &ldquo;Slim oefenen&rdquo; zijn ronde samenstelt. &ldquo;Oefen alle woorden&rdquo; neemt altijd het hele deck, en een foutenronde altijd alle woorden die nog fout staan.">?</span></label>
+        <label class="setting-label" for="sel-max-round">Max. woorden per ronde<span class="hint-icon" tabindex="0" title="Bepaalt alleen hoe &ldquo;Slim oefenen&rdquo; zijn ronde samenstelt. &ldquo;Alle woorden&rdquo; neemt altijd het hele deck, en een foutenronde altijd alle woorden die nog fout staan.">?</span></label>
         <select class="setting-select" id="sel-max-round">
           <option value="10" selected>10</option>
           <option value="20">20</option>
@@ -756,21 +744,30 @@
       </div>
     </section>
     <!-- Achtergrond bij het oefenen: wat werkt, en hoe je dat met deze app doet. -->
-    <details class="foldout" id="tips">
-      <summary class="foldout-title">Tips: hoe onthoud je woordjes?</summary>
-      <div class="foldout-body">
-        <ul class="tips-list">
-          <li><strong>Actief ophalen (active recall)</strong> &mdash; Je onthoudt een woord beter als je de betekenis zelf uit je geheugen opdiept dan als je hem naleest. <span class="tip-app">In de app: het gevraagde woord wordt altijd getoond zonder het antwoord, dus je moet het zelf actief in het tekstvak typen. De knoppen &ldquo;Weet ik&rdquo; en &ldquo;Weet ik niet&rdquo; helpen om nodeloos typewerk te vermijden.</span></li>
-          <li><strong>Gespreide herhaling (spaced repetition)</strong> &mdash; Herhalen vlak voordat je iets dreigt te vergeten verankert het in je langetermijngeheugen; verspreid over dagen levert meer op dan &eacute;&eacute;n lange sessie. <span class="tip-app">In de app: &ldquo;Slim oefenen&rdquo; doet die planning zelf &mdash; hoe vaker een woord goed gaat, hoe langer het wegblijft.</span></li>
-          <li><strong>Kort en gefocust</strong> &mdash; Je brein neemt per sessie maar een beperkte hoeveelheid nieuwe informatie op: 15 tot 20 minuten met daarna pauze werkt beter dan doorgaan. <span class="tip-app">In de app: houd het aantal nieuwe of foute woorden per ronde klein (standaard 5) en vul die aan tot een maximum (standaard 10) met woorden die je al eens goed gedaan hebt. Deze strategie wordt standaard toegepast bij &ldquo;Slim oefenen&rdquo;.</span></li>
-          <li><strong>Multisensorieel leren</strong> &mdash; Horen, uitspreken en schrijven leggen elk een eigen geheugenspoor aan, naast het visuele, waardoor je woorden beter en sneller leert. <span class="tip-app">In de app: zet &ldquo;Automatisch voorlezen&rdquo; aan en spreek het woord hardop na; schrijf hardnekkige woorden daarnaast een paar keer met de hand op.</span></li>
-          <li><strong>Dual coding en visualisatie</strong> &mdash; Informatie die als beeld &eacute;n als taal is opgeslagen, vind je langs twee wegen terug. <span class="tip-app">In de app: roep bij het lezen of horen van een woord bewust een beeld of situatie op, in plaats van de letters te herhalen.</span></li>
-          <li><strong>Trefwoordmethode (keyword method)</strong> &mdash; Zoek een klankverwantschap in het Nederlands en knoop daar een beeld aan vast. Het Spaanse <em>gato</em> (kat) klinkt als &ldquo;gat&rdquo;: een kat die door een gat in de schutting kruipt. <span class="tip-app">In de app: bedenk zo&rsquo;n ezelsbruggetje voor woorden die steeds opnieuw fout gaan.</span></li>
-          <li><strong>Contextueel leren</strong> &mdash; Een woord in een betekenisvolle zin onthoud je aanzienlijk sneller dan als los item. <span class="tip-app">In de app: gebruik de voorbeeldzinnen uit het lesbestand, of bedenk zelf een zin met het woord erin.</span></li>
-          <li><strong>Geheugenpaleis (loci-methode)</strong> &mdash; Koppel woorden aan vaste plekken op een bekende route door je huis en loop die route in gedachten af. <span class="tip-app">In de app: vooral nuttig voor abstracte woorden en rijtjes die fout blijven gaan.</span></li>
-        </ul>
-      </div>
-    </details>
+    <section class="section">
+      <h2 class="section-title">Leerstrategie&euml;n</h2>
+      <details class="foldout" id="strategy-smart">
+        <summary class="foldout-title">Slim oefenen: focus en gespreide herhaling</summary>
+        <div class="foldout-body">
+          <!-- Tekst volgt nog. -->
+        </div>
+      </details>
+      <details class="foldout" id="tips">
+        <summary class="foldout-title">Tips: hoe onthoud je woordjes?</summary>
+        <div class="foldout-body">
+          <ul class="tips-list">
+            <li><strong>Actief ophalen (active recall)</strong> &mdash; Je onthoudt een woord beter als je de betekenis zelf uit je geheugen opdiept dan als je hem naleest. <span class="tip-app">In de app: het gevraagde woord wordt altijd getoond zonder het antwoord, dus je moet het zelf actief in het tekstvak typen. De knoppen &ldquo;Weet ik&rdquo; en &ldquo;Weet ik niet&rdquo; helpen om nodeloos typewerk te vermijden.</span></li>
+            <li><strong>Gespreide herhaling (spaced repetition)</strong> &mdash; Herhalen vlak voordat je iets dreigt te vergeten verankert het in je langetermijngeheugen; verspreid over dagen levert meer op dan &eacute;&eacute;n lange sessie. <span class="tip-app">In de app: &ldquo;Slim oefenen&rdquo; doet die planning zelf &mdash; hoe vaker een woord goed gaat, hoe langer het wegblijft.</span></li>
+            <li><strong>Kort en gefocust</strong> &mdash; Je brein neemt per sessie maar een beperkte hoeveelheid nieuwe informatie op: 15 tot 20 minuten met daarna pauze werkt beter dan doorgaan. <span class="tip-app">In de app: houd het aantal nieuwe of foute woorden per ronde klein (standaard 5) en vul die aan tot een maximum (standaard 10) met woorden die je al eens goed gedaan hebt. Deze strategie wordt standaard toegepast bij &ldquo;Slim oefenen&rdquo;.</span></li>
+            <li><strong>Multisensorieel leren</strong> &mdash; Horen, uitspreken en schrijven leggen elk een eigen geheugenspoor aan, naast het visuele, waardoor je woorden beter en sneller leert. <span class="tip-app">In de app: zet &ldquo;Automatisch voorlezen&rdquo; aan en spreek het woord hardop na; schrijf hardnekkige woorden daarnaast een paar keer met de hand op.</span></li>
+            <li><strong>Dual coding en visualisatie</strong> &mdash; Informatie die als beeld &eacute;n als taal is opgeslagen, vind je langs twee wegen terug. <span class="tip-app">In de app: roep bij het lezen of horen van een woord bewust een beeld of situatie op, in plaats van de letters te herhalen.</span></li>
+            <li><strong>Trefwoordmethode (keyword method)</strong> &mdash; Zoek een klankverwantschap in het Nederlands en knoop daar een beeld aan vast. Het Spaanse <em>gato</em> (kat) klinkt als &ldquo;gat&rdquo;: een kat die door een gat in de schutting kruipt. <span class="tip-app">In de app: bedenk zo&rsquo;n ezelsbruggetje voor woorden die steeds opnieuw fout gaan.</span></li>
+            <li><strong>Contextueel leren</strong> &mdash; Een woord in een betekenisvolle zin onthoud je aanzienlijk sneller dan als los item. <span class="tip-app">In de app: gebruik de voorbeeldzinnen uit het lesbestand, of bedenk zelf een zin met het woord erin.</span></li>
+            <li><strong>Geheugenpaleis (loci-methode)</strong> &mdash; Koppel woorden aan vaste plekken op een bekende route door je huis en loop die route in gedachten af. <span class="tip-app">In de app: vooral nuttig voor abstracte woorden en rijtjes die fout blijven gaan.</span></li>
+          </ul>
+        </div>
+      </details>
+    </section>
   </div>
 
   <!-- Quiz-scherm -->
@@ -818,14 +815,14 @@
     <div id="mistakes-list"></div>
     <div class="warning hidden" id="empty-round"></div>
     <div class="end-actions">
-      <div class="primary-cta-row">
-        <button class="btn-primary-cta" id="btn-smart-practice" type="button">Slim oefenen</button>
-        <span class="info-icon" tabindex="0" title="Toont het ingestelde aantal foute/overgeslagen woorden, aangevuld met goede woorden die volgens het schema weer aan de beurt zijn. Hoe vaker je een woord goed hebt, hoe langer het wegblijft. Woorden die op 'niet meer oefenen' staan worden niet meer getoond.">?</span>
-      </div>
-
-      <div class="secondary-actions">
-        <button class="btn-mistakes" id="btn-practice-mistakes">Oefen foute woorden</button>
-        <button class="btn-all" id="btn-practice-all">Oefen alle woorden</button>
+      <!-- Menu-inhoud komt uit PRACTICE_OPTIONS: beide schermen bieden dezelfde opties. -->
+      <div class="split-row">
+        <div class="split-button">
+          <button class="btn-split-main" id="btn-end-main" type="button"></button>
+          <button class="btn-split-toggle" id="btn-end-menu" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Meer oefenopties"></button>
+          <div class="split-menu hidden" id="end-menu" role="menu"></div>
+        </div>
+        <span class="info-icon" id="end-hint" tabindex="0">?</span>
       </div>
 
       <button class="btn-tostart-link" id="btn-to-start" type="button">Naar startscherm</button>
@@ -917,9 +914,6 @@
   const histogramEl = document.getElementById("stats-histogram");
   const emptyRoundEl = document.getElementById("empty-round");
   const btnToggleAnswers = document.getElementById("btn-toggle-answers");
-  const btnSmartPractice = document.getElementById("btn-smart-practice");
-  const btnPracticeMistakes = document.getElementById("btn-practice-mistakes");
-  const btnPracticeAll = document.getElementById("btn-practice-all");
   const btnToStart = document.getElementById("btn-to-start");
   const btnToStartQuiz = document.getElementById("btn-to-start-quiz");
   const selDirection = document.getElementById("sel-direction");
@@ -929,11 +923,6 @@
   const selMaxWrongSkipped = document.getElementById("sel-max-wrong-skipped");
   const startActions = document.getElementById("start-actions");
   const resumeInfo = document.getElementById("resume-info");
-  const btnResume = document.getElementById("btn-resume");
-  const btnStartMenu = document.getElementById("btn-start-menu");
-  const startMenu = document.getElementById("start-menu");
-  const btnClearProgress = document.getElementById("btn-clear-progress");
-  const btnPracticeAllStart = document.getElementById("btn-practice-all-start");
   const btnNewFile = document.getElementById("btn-new-file");
   const editTitleEl = document.getElementById("edit-title");
   const editFileNameEl = document.getElementById("edit-file-name");
@@ -1126,10 +1115,8 @@
       return;
     }
 
-    // Zonder voortgang in deze richting is "Slim oefenen" nog zinloos en doet
-    // "Oefen alle woorden" hetzelfde als "Start nieuwe sessie": één knop volstaat.
-    // De score hoort bij diezelfde voortgang: die van een deck dat je daarna hebt
-    // weggehaald, zegt niets over de woorden die er nu staan.
+    // De score hoort bij de voortgang in deze richting: die van een deck dat je daarna
+    // hebt weggehaald, zegt niets over de woorden die er nu staan.
     const hasProgress = hasProgressFor(getDirection());
     const lastRound = hasProgress ? normalizeLastRound(stored.lastRound)[getDirection()] : null;
     const roundText = lastRound
@@ -1137,10 +1124,7 @@
       : "nog niet geoefend";
     // De bestandsnamen staan er vlak boven al in #file-list, dus hier alleen de ronde.
     resumeInfo.textContent = roundText;
-    // Zonder voortgang valt er niets te kiezen: dan staat de hoofdknop er zonder menu.
-    btnResume.textContent = hasProgress ? "Slim oefenen" : "Start nieuwe sessie";
-    btnStartMenu.classList.toggle("hidden", !hasProgress);
-    openStartMenu(false);
+    startSplit.refresh();
     startActions.classList.remove("hidden");
   }
 
@@ -1706,14 +1690,49 @@
     beginSession(buildPlaylist(words, sentences));
   }
 
+  // Een kant-en-klare lijst items in de ingestelde volgorde zetten.
+  function ordered(items) {
+    return getOrderMode() === "original" ? inDeckOrder(items) : shuffle(items);
+  }
+
+  function deckItems() {
+    return combinedWords.concat(combinedSentences);
+  }
+
   // Alle woorden die nog fout staan, niet alleen de fouten van deze ronde; hoogste fout-teller eerst.
-  function wrongItems() {
-    const entries = combinedWords.concat(combinedSentences)
-      .map((item) => ({ item, state: stateFor(item) }))
+  function wrongItems(dir = direction) {
+    const entries = deckItems()
+      .map((item) => ({ item, state: stateFor(item, dir) }))
       .filter((entry) => entry.state.f > 0);
     return sortShuffled(entries, (entry) => -entry.state.f).map((entry) => entry.item);
   }
 
+  // Nieuw = nog nooit getoond in deze richting, precies de 'unseen' van selectSmartItems.
+  function newItems(dir = direction) {
+    return deckItems().filter((item) => !hasStateFor(item, dir));
+  }
+
+  // De fouten van de laatste afgeronde ronde. Die staan als sleutels in lastRound, dus ze
+  // overleven een herlaad; woorden die daarna uit het deck zijn gehaald vallen vanzelf af.
+  function lastRoundWrongItems(dir = direction) {
+    const entry = normalizeLastRound(storedMeta.lastRound)[dir];
+    const keys = new Set((entry && entry.wrong) || []);
+    if (keys.size === 0) return [];
+    return deckItems().filter((item) => keys.has(itemKey(item)));
+  }
+
+  // Een lesbestand waarvan je nog geen enkel woord gezien hebt is een sterker signaal dan een
+  // paar losse nieuwe woorden: dat bestand wil je eerst een keer helemaal doorlopen. Een naam
+  // zonder bijbehorende woorden telt niet mee, anders zou een leeg bestand hier blijven hangen.
+  function hasUntouchedFile(dir = direction) {
+    return (storedMeta.fileNames || []).some((name) => {
+      const items = deckItems().filter((item) => item.file === name);
+      return items.length > 0 && items.every((item) => !hasStateFor(item, dir));
+    });
+  }
+
+  // Niet via ordered(): wrongItems() staat al op fout-teller gesorteerd, en die volgorde
+  // (het vaakst fout eerst) is hier zinvoller dan opnieuw schudden.
   function startMistakesQuiz() {
     const items = wrongItems();
     beginSession(getOrderMode() === "original" ? inDeckOrder(items) : items);
@@ -2074,12 +2093,18 @@
       : `Ronde Score: ${score} / ${answeredTotal}`;
     const goodWords = countGoodWords();
     finalScoreSubEl.textContent = `${goodWords.good} / ${goodWords.total} een of meer keer goed`;
-    btnPracticeMistakes.disabled = wrongItems().length === 0;
 
+    // wrong bewaart de fouten van deze ronde als itemKey, zodat "Foute woorden deze ronde"
+    // ook op het startscherm en na een herlaad nog weet om welke woorden het ging.
     const prevLastRound = normalizeLastRound(storedMeta.lastRound);
     persistState({
-      lastRound: { ...prevLastRound, [direction]: { score, total: answeredTotal, skipped, at: Date.now() } },
+      lastRound: { ...prevLastRound, [direction]: {
+        score, total: answeredTotal, skipped, at: Date.now(),
+        wrong: Array.from(new Set(mistakes.map(itemKey))),
+      } },
     });
+    // Pas na het opslaan: anders kent "Foute woorden deze ronde" deze ronde nog niet.
+    endSplit.refresh();
 
     emptyRoundEl.classList.add("hidden");
     renderHistogram(new Set(answeredItems));
@@ -2285,7 +2310,7 @@
   }
 
   function notifyEmptySmartRound() {
-    const message = "Alle woorden staan op 'niet meer oefenen'. Kies 'Oefen alle woorden' om ze toch te oefenen.";
+    const message = "Alle woorden staan op 'niet meer oefenen'. Kies 'Alle woorden' om ze toch te oefenen.";
     const target = screenEnd.classList.contains("hidden") ? startWarning : emptyRoundEl;
     target.textContent = message;
     target.classList.remove("hidden");
@@ -2318,17 +2343,6 @@
     renderMistakes();
   });
 
-  btnPracticeMistakes.addEventListener("click", () => {
-    if (wrongItems().length === 0) return;
-    startMistakesQuiz();
-  });
-
-  btnPracticeAll.addEventListener("click", () => {
-    startQuiz(combinedWords, combinedSentences);
-  });
-
-  btnSmartPractice.addEventListener("click", () => startSmartRound());
-
   function goToStartScreen() {
     cancelAutoAdvance();
     if (speechSupported) window.speechSynthesis.cancel();
@@ -2354,47 +2368,162 @@
     renderFileList();
   }
 
-  // ---------- Split-button op het startscherm ----------
-  function openStartMenu(open) {
-    startMenu.classList.toggle("hidden", !open);
-    btnStartMenu.setAttribute("aria-expanded", String(open));
+  // ---------- Oefenopties ----------
+  // Eén lijst voor het startscherm en het eindscherm, in de volgorde waarin ze in het menu
+  // komen te staan. enabled() zegt of de optie nu iets oplevert; run() geeft true terug als
+  // er een ronde begonnen is. De richting komt expliciet mee: op het startscherm kan de
+  // dropdown net verzet zijn terwijl `direction` nog op de vorige ronde staat.
+  const PRACTICE_OPTIONS = [
+    {
+      id: "smart",
+      label: "Slim oefenen",
+      hint: "Toont het ingestelde aantal foute/overgeslagen woorden, aangevuld met goede woorden die volgens het schema weer aan de beurt zijn. Hoe vaker je een woord goed hebt, hoe langer het wegblijft. Woorden die op 'niet meer oefenen' staan worden niet meer getoond.",
+      enabled: () => hasDeck(),
+      run: () => startSmartRound(),
+    },
+    {
+      id: "round-wrong",
+      label: "Foute woorden deze ronde",
+      hint: "Alleen de woorden die je in de laatste afgeronde ronde fout had.",
+      enabled: (dir) => lastRoundWrongItems(dir).length > 0,
+      run: (dir) => {
+        beginSession(ordered(lastRoundWrongItems(dir)));
+        return true;
+      },
+    },
+    {
+      id: "all-wrong",
+      label: "Alle foute woorden",
+      hint: "Alle woorden die nog fout staan, dus ook die van eerdere rondes. Een woord valt hier pas uit zodra je het weer goed hebt.",
+      enabled: (dir) => wrongItems(dir).length > 0,
+      run: () => {
+        startMistakesQuiz();
+        return true;
+      },
+    },
+    {
+      id: "all",
+      label: "Alle woorden",
+      hint: "Het hele deck in één ronde; het maximum aantal woorden per ronde geldt hier niet.",
+      enabled: () => hasDeck(),
+      run: () => {
+        startQuiz(combinedWords, combinedSentences);
+        return true;
+      },
+    },
+    {
+      id: "new",
+      label: "Alle nieuwe woorden",
+      hint: "Alleen de woorden die je in deze richting nog nooit gezien hebt.",
+      enabled: (dir) => newItems(dir).length > 0,
+      run: (dir) => {
+        beginSession(ordered(newItems(dir)));
+        return true;
+      },
+    },
+    {
+      id: "reset",
+      label: "Nieuwe sessie",
+      hint: "Wist de statistieken van deze richting en begint opnieuw. De andere richting blijft bewaard.",
+      enabled: () => hasDeck(),
+      run: (dir) => {
+        // Alleen vragen als er iets te verliezen valt; de dialoog start de ronde zelf.
+        if (hasProgressFor(dir)) {
+          confirmDialog.showModal();
+          return false;
+        }
+        startNewSession();
+        return true;
+      },
+    },
+  ];
+
+  function optionById(id) {
+    return PRACTICE_OPTIONS.find((option) => option.id === id);
   }
 
-  btnStartMenu.addEventListener("click", (e) => {
-    e.stopPropagation();
-    openStartMenu(startMenu.classList.contains("hidden"));
-  });
+  // Welke optie voorop staat. "Alle woorden" en "Alle nieuwe woorden" selecteren hetzelfde
+  // als er nog niets geoefend is; dan is de algemenere naam de duidelijkste.
+  function preferredOption(dir) {
+    if (!hasProgressFor(dir)) return "all";
+    if (newItems(dir).length > 5 || hasUntouchedFile(dir)) return "new";
+    return "smart";
+  }
 
-  // Klikken buiten het menu of Escape sluit het weer. Een klik in het menu zelf niet:
-  // die moet eerst bij de knop eronder aankomen.
-  startMenu.addEventListener("click", (e) => e.stopPropagation());
-  document.addEventListener("click", () => openStartMenu(false));
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") openStartMenu(false);
-  });
+  // ---------- Split-button (startscherm en eindscherm) ----------
+  const splitButtons = [];
 
-  btnResume.addEventListener("click", () => {
-    if (!hasDeck()) return;
-    // Zonder voortgang valt er niets slims te kiezen en niets te wissen: gewoon beginnen.
-    if (!hasProgressFor(getDirection())) {
-      startNewSession();
-      return;
+  function setupSplitButton(prefix) {
+    const main = document.getElementById(`btn-${prefix}-main`);
+    const toggle = document.getElementById(`btn-${prefix}-menu`);
+    const menu = document.getElementById(`${prefix}-menu`);
+    const hintIcon = document.getElementById(`${prefix}-hint`);
+
+    function open(isOpen) {
+      menu.classList.toggle("hidden", !isOpen);
+      toggle.setAttribute("aria-expanded", String(isOpen));
     }
-    // Bij een lege ronde blijft de knop staan, zodat 'Oefen alle woorden' bereikbaar blijft.
-    if (startSmartRound()) startActions.classList.add("hidden");
+
+    function choose(option) {
+      open(false);
+      if (!hasDeck()) return;
+      const dir = getDirection();
+      direction = dir;
+      // Bij een lege ronde blijft het startscherm staan, zodat het menu bereikbaar blijft.
+      if (option.run(dir)) startActions.classList.add("hidden");
+    }
+
+    toggle.addEventListener("click", (e) => {
+      e.stopPropagation();
+      open(menu.classList.contains("hidden"));
+    });
+    // Een klik in het menu zelf sluit het niet via document: die moet eerst bij de knop
+    // eronder aankomen.
+    menu.addEventListener("click", (e) => e.stopPropagation());
+    main.addEventListener("click", () => choose(optionById(main.dataset.option)));
+
+    // De voorkeursoptie staat op de hoofdknop en niet nog eens in het menu.
+    function refresh() {
+      const dir = getDirection();
+      const preferred = optionById(preferredOption(dir));
+      main.dataset.option = preferred.id;
+      main.textContent = preferred.label;
+      hintIcon.title = preferred.hint;
+
+      menu.innerHTML = "";
+      for (const option of PRACTICE_OPTIONS) {
+        if (option.id === preferred.id) continue;
+        const button = document.createElement("button");
+        button.type = "button";
+        button.setAttribute("role", "menuitem");
+        button.dataset.option = option.id;
+        button.textContent = option.label;
+        button.title = option.hint;
+        button.disabled = !option.enabled(dir);
+        button.addEventListener("click", () => choose(option));
+        menu.appendChild(button);
+      }
+      open(false);
+    }
+
+    const instance = { refresh, open };
+    splitButtons.push(instance);
+    return instance;
+  }
+
+  const startSplit = setupSplitButton("start");
+  const endSplit = setupSplitButton("end");
+
+  // Klikken buiten een menu of Escape sluit beide.
+  function closeSplitMenus() {
+    for (const instance of splitButtons) instance.open(false);
+  }
+  document.addEventListener("click", closeSplitMenus);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeSplitMenus();
   });
 
-  // Hele lijst oefenen vanaf het startscherm: geen reset, en het ronde-maximum geldt hier niet.
-  btnPracticeAllStart.addEventListener("click", () => {
-    openStartMenu(false);
-    if (!hasDeck()) return;
-    startActions.classList.add("hidden");
-
-    direction = getDirection();
-    startQuiz(combinedWords, combinedSentences);
-  });
-
-  // "Start nieuwe sessie" reset alleen de statistieken van de huidige richting; de andere richting blijft bewaard.
+  // "Nieuwe sessie" reset alleen de statistieken van de huidige richting; de andere richting blijft bewaard.
   function startNewSession() {
     direction = getDirection();
     resetCurrentDirectionStats();
@@ -2403,20 +2532,6 @@
     startSmartRound();
     persistState({ fileNames: storedMeta.fileNames });
   }
-
-  btnClearProgress.addEventListener("click", () => {
-    openStartMenu(false);
-    if (!hasDeck()) {
-      refreshResumeBanner();
-      return;
-    }
-    // Alleen vragen als er iets te verliezen valt.
-    if (hasProgressFor(getDirection())) {
-      confirmDialog.showModal();
-      return;
-    }
-    startNewSession();
-  });
 
   btnConfirmCancel.addEventListener("click", () => confirmDialog.close());
   btnConfirmOk.addEventListener("click", () => {
