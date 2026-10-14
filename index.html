@@ -397,21 +397,6 @@
     text-decoration: underline;
   }
   .btn-toggle-answers:hover { background: none; filter: none; color: var(--accent-dark); }
-  .skip-wrap {
-    display: flex;
-    justify-content: center;
-    margin-top: 10px;
-  }
-  .btn-skip {
-    flex: 0 0 auto;
-    background: none;
-    color: var(--muted);
-    padding: 4px 8px;
-    font-size: 0.85rem;
-    text-decoration: underline;
-    font-weight: 600;
-  }
-  .btn-skip:hover { background: none; filter: none; color: var(--text); }
   .mistake-row {
     display: flex;
     align-items: baseline;
@@ -781,9 +766,6 @@
       <button class="btn-know" id="btn-know">Weet ik</button>
       <button class="btn-dontknow" id="btn-dontknow">Weet ik niet</button>
     </div>
-    <div class="skip-wrap">
-      <button class="btn-skip" id="btn-skip" type="button">Sla over</button>
-    </div>
     <button class="btn-tostart-link" id="btn-to-start-quiz" type="button">Naar startscherm</button>
     <div class="feedback" id="feedback"></div>
     <div class="answer-actions hidden" id="answer-actions">
@@ -887,7 +869,6 @@
   const btnCheck = document.getElementById("btn-check");
   const btnKnow = document.getElementById("btn-know");
   const btnDontKnow = document.getElementById("btn-dontknow");
-  const btnSkip = document.getElementById("btn-skip");
   const btnNext = document.getElementById("btn-next");
   const feedbackEl = document.getElementById("feedback");
   const answerActions = document.getElementById("answer-actions");
@@ -935,7 +916,6 @@
   let score = 0;
   let mistakes = [];
   let answeredItems = []; // alles wat deze ronde beantwoord is, goed of fout - voor de histogram
-  let skipped = 0;
   let answered = false;
   let answersRevealed = false;
   let preAnswerState = null; // staat van vóór het huidige antwoord, voor 'Toch fout'
@@ -1647,15 +1627,16 @@
     return selMaxRound.value;
   }
 
-  // Plafond voor alles wat je nog niet kent samen: foute, overgeslagen en nieuwe woorden.
-  // Heet in de instellingen "Max. foute/nieuwe woorden"; overgeslagen woorden tellen mee.
+  // Plafond voor alles wat je nog niet kent samen: foute en nieuwe woorden, plus woorden die
+  // in oude voortgang nog als overgeslagen staan. Heet in de instellingen
+  // "Max. foute/nieuwe woorden".
   function getMaxWrongSkipped() {
     return Number(selMaxWrongSkipped.value);
   }
 
   // "all" betekent: geen plafond. Infinity werkt gewoon in Math.min en Array#slice.
   // "same" maakt de ronde precies zo groot als het quotum voor onbekende woorden: zolang er
-  // genoeg foute, overgeslagen en nieuwe woorden zijn vullen die de hele ronde, en komt er
+  // genoeg foute en nieuwe woorden zijn vullen die de hele ronde, en komt er
   // geen herhaling van bekende woorden bij. Zijn er te weinig, dan vult de planning aan.
   function getMaxRoundSize() {
     const value = getMaxRoundValue();
@@ -1773,7 +1754,6 @@
     score = 0;
     mistakes = [];
     answeredItems = [];
-    skipped = 0;
     direction = directionOverride || getDirection();
     soundMode = getSoundMode();
     cancelAutoAdvance();
@@ -1804,7 +1784,6 @@
     btnCheck.disabled = false;
     btnKnow.disabled = false;
     btnDontKnow.disabled = false;
-    btnSkip.disabled = false;
     feedbackEl.className = "feedback";
     feedbackEl.textContent = "";
     answerActions.classList.add("hidden");
@@ -1921,7 +1900,6 @@
     btnCheck.disabled = true;
     btnKnow.disabled = true;
     btnDontKnow.disabled = true;
-    btnSkip.disabled = true;
     btnNext.classList.remove("hidden");
     btnNext.focus();
   }
@@ -1953,13 +1931,6 @@
     const entry = wordStats.get(item) || {};
     const { g, f, s } = stateFor(item);
     entry[direction] = withExcluded({ g, f, s }, excluded);
-    wordStats.set(item, entry);
-    persistState();
-  }
-
-  function recordSkip(item) {
-    const entry = wordStats.get(item) || {};
-    entry[direction] = skipState(stateFor(item), roundNumberFor());
     wordStats.set(item, entry);
     persistState();
   }
@@ -2028,13 +1999,6 @@
     handleResult(false);
   });
 
-  btnSkip.addEventListener("click", () => {
-    if (answered) return;
-    skipped += 1;
-    recordSkip(currentItem());
-    goToNextItem();
-  });
-
   answerInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && !answered) {
       e.preventDefault();
@@ -2081,9 +2045,7 @@
     roundNumber = { ...normalizeRoundNumber(roundNumber), [direction]: roundNumberFor() + 1 };
 
     const answeredTotal = score + mistakes.length;
-    finalScoreEl.textContent = skipped > 0
-      ? `Ronde Score: ${score} / ${answeredTotal} (${skipped} overgeslagen)`
-      : `Ronde Score: ${score} / ${answeredTotal}`;
+    finalScoreEl.textContent = `Ronde Score: ${score} / ${answeredTotal}`;
     const goodWords = countGoodWords();
     finalScoreSubEl.textContent = `${goodWords.good} / ${goodWords.total} een of meer keer goed`;
 
@@ -2092,7 +2054,7 @@
     const prevLastRound = normalizeLastRound(storedMeta.lastRound);
     persistState({
       lastRound: { ...prevLastRound, [direction]: {
-        score, total: answeredTotal, skipped, at: Date.now(),
+        score, total: answeredTotal, at: Date.now(),
         wrong: Array.from(new Set(mistakes.map(itemKey))),
       } },
     });
@@ -2117,14 +2079,14 @@
     "hsl(147, 55%, 80%)",
     "hsl(43, 60%, 78%)",
   ];
-  const HISTOGRAM_LABELS = ["Over&shy;geslagen", "Fout", "1", "2", "3", "4", "5+", "Klaar"];
+  const HISTOGRAM_LABELS = ["Nieuw", "Fout", "1", "2", "3", "4", "5+", "Klaar"];
   const HISTOGRAM_NOW_WRONG = "var(--bad)";
   const HISTOGRAM_NOW_GOOD = "var(--good)";
   const HISTOGRAM_NOW_EXCLUDED = "var(--gold)";
   const HISTOGRAM_EXCLUDED_BUCKET = 7;
 
-  // Links alle woorden waar nog geen goed antwoord voor is: nog nooit getoond, of door
-  // de gebruiker overgeslagen. Daarnaast alle woorden die nog fout staan, ook die van
+  // Links, onder "Nieuw", alle woorden waar nog geen goed antwoord voor is: nog nooit
+  // getoond, of in oude voortgang overgeslagen. Daarnaast alle woorden die nog fout staan, ook die van
   // eerdere rondes, en daarna de woorden per aantal keer goed. Samen beslaan de balken
   // het hele deck. `now` telt per balk hoeveel daarvan deze ronde beantwoord zijn: in de
   // foutenbalk is dat per se fout gegaan, in een groene balk per se goed. Rechts staan los
@@ -2221,27 +2183,21 @@
     return { g: Math.min(Math.floor(state.g / 2), 4), f: state.f + 1, s: round + 1 };
   }
 
-  // Overslaan verandert niets aan wat je al kunt: alleen de planning schuift op, alsof het
-  // woord zijn beurt gehad heeft. Een woord zonder staat krijgt er zo een met s = ronde + 1
-  // en telt daarna als overgeslagen in plaats van als nooit getoond.
-  function skipState(state, round) {
-    return withExcluded({ g: state.g, f: state.f, s: round + intervalFor(state.g) }, state.x);
-  }
-
   // Eerst shuffelen, dan stabiel sorteren: gelijke sleutels komen willekeurig te staan.
   function sortShuffled(entries, key) {
     return shuffle(entries).sort((a, b) => key(a) - key(b));
   }
 
   // entries: [{ item, state, seen }]. Geeft de gekozen items terug, op relevantie gesorteerd.
-  // maxWrongSkipped is het plafond voor alles wat je nog niet kent samen: foute, overgeslagen
-  // en nieuwe woorden. Zo neemt een net toegevoegd lesbestand de ronde niet over en blijft het
+  // maxWrongSkipped is het plafond voor alles wat je nog niet kent samen: foute, nieuwe en
+  // oude overgeslagen woorden. Zo neemt een net toegevoegd lesbestand de ronde niet over en blijft het
   // aantal onbekende woorden per ronde leerbaar; de rest van de ronde gaat naar woorden die
   // volgens het schema weer aan de beurt zijn.
   function selectSmartItems(entries, round, { cap, maxWrongSkipped }) {
     const wrong = sortShuffled(entries.filter((e) => e.state.f > 0), (e) => -e.state.f);
-    // Een opgeslagen staat zonder enig goed en zonder fout kan alleen van overslaan komen;
-    // de laagste s hoort bij het woord dat het langst geleden is overgeslagen.
+    // Een opgeslagen staat zonder enig goed en zonder fout kon alleen van de weggehaalde
+    // 'Sla over'-knop komen. Nieuw ontstaat die niet meer, maar oude voortgang kan hem nog
+    // bevatten; zonder deze pool zouden die woorden nooit meer aan de beurt komen.
     const skippedPool = sortShuffled(
       entries.filter((e) => e.seen && e.state.f === 0 && e.state.g === 0),
       (e) => e.state.s
@@ -2253,7 +2209,7 @@
     const due = sortShuffled(known.filter((e) => e.state.s <= round), (e) => e.state.s);
     const later = sortShuffled(known.filter((e) => e.state.s > round), (e) => e.state.s);
 
-    // Het quotum gaat op volgorde van urgentie: fout, dan overgeslagen, dan nieuw. Staat de
+    // Het quotum gaat op volgorde van urgentie: fout, dan oud-overgeslagen, dan nieuw. Staat de
     // foutenstapel vol, dan komen er dus even geen nieuwe woorden bij — eerst die stapel
     // wegwerken. Wie daar niet op wil wachten kiest "Alle nieuwe woorden".
     const wrongRoom = Math.min(wrong.length, maxWrongSkipped);
@@ -2376,7 +2332,7 @@
     {
       id: "smart",
       label: "Slim oefenen",
-      hint: "Toont het ingestelde aantal nog onbekende woorden — eerst foute, dan overgeslagen, dan nieuwe — aangevuld met goede woorden die volgens het schema weer aan de beurt zijn. Hoe vaker je een woord goed hebt, hoe langer het wegblijft. Woorden die op 'niet meer oefenen' staan worden niet meer getoond.",
+      hint: "Toont het ingestelde aantal nog onbekende woorden — eerst foute, dan nieuwe — aangevuld met goede woorden die volgens het schema weer aan de beurt zijn. Hoe vaker je een woord goed hebt, hoe langer het wegblijft. Woorden die op 'niet meer oefenen' staan worden niet meer getoond.",
       enabled: () => hasDeck(),
       run: () => startSmartRound(),
     },
