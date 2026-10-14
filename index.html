@@ -509,7 +509,8 @@
     display: none;
   }
   /* Driehoekje dat meedraait als de sectie opengaat. */
-  .foldout-title::before {
+  .foldout-title::before,
+  .section-toggle::before {
     content: "";
     flex: 0 0 auto;
     width: 0;
@@ -519,7 +520,8 @@
     border-bottom: 4px solid transparent;
     transition: transform 0.15s ease;
   }
-  .foldout[open] .foldout-title::before {
+  .foldout[open] .foldout-title::before,
+  .section-fold[open] > .section-toggle::before {
     transform: rotate(90deg);
   }
   .foldout-body {
@@ -539,6 +541,24 @@
     text-transform: uppercase;
     color: var(--muted);
   }
+  /* Instellingen en Leerstrategieen staan standaard dicht: het startscherm begint bij de
+     oefenknop en het lesbestand, de rest klap je open als je het nodig hebt. */
+  .section-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    list-style: none; /* zonder dit zet Firefox er zijn eigen driehoekje naast */
+  }
+  .section-toggle::-webkit-details-marker { display: none; }
+  /* De marge onder de kop hoort bij de opengeklapte stand; in de kop zelf zou hij de
+     dichtgeklapte regel onnodig hoog maken. */
+  .section-toggle .section-title { margin: 0; }
+  .section-toggle:hover .section-title { color: var(--text); }
+  .section-fold[open] > .section-toggle { margin-bottom: 14px; }
+  /* Dichtgeklapt is een sectie maar een regel; 30px eronder maakt het scherm leeg in
+     plaats van rustig. */
+  .section-fold:not([open]) + .section { margin-top: 14px; }
   .foldout + .foldout {
     margin-top: 10px;
   }
@@ -674,8 +694,8 @@
       <div class="file-list" id="file-list"></div>
       <div class="warning hidden" id="start-warning"></div>
     </section>
-    <section class="section">
-      <h2 class="section-title">Instellingen</h2>
+    <details class="section section-fold">
+      <summary class="section-toggle"><h2 class="section-title">Instellingen</h2></summary>
       <div class="settings">
         <label class="setting-label" for="sel-direction">Richting</label>
         <select class="setting-select" id="sel-direction">
@@ -717,10 +737,10 @@
           <option value="all">Alle woorden</option>
         </select>
       </div>
-    </section>
+    </details>
     <!-- Achtergrond bij het oefenen: wat werkt, en hoe je dat met deze app doet. -->
-    <section class="section">
-      <h2 class="section-title">Leerstrategie&euml;n</h2>
+    <details class="section section-fold">
+      <summary class="section-toggle"><h2 class="section-title">Leerstrategie&euml;n</h2></summary>
       <details class="foldout" id="strategy-smart">
         <summary class="foldout-title">Slim oefenen: focus en gespreide herhaling</summary>
         <div class="foldout-body">
@@ -742,7 +762,7 @@
           </ul>
         </div>
       </details>
-    </section>
+    </details>
   </div>
 
   <!-- Quiz-scherm -->
