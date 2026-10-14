@@ -958,6 +958,12 @@
   // ---------- Voortgang opslaan (localStorage) ----------
   const STORAGE_KEY = "woordjesleren:progress:v1";
   let storedMeta = {}; // { fileNames, lastRound } - aangevuld via persistState()
+  // De oefenvorm die de gebruiker zelf uit het menu koos; null = nog geen keuze. Gaat mee in
+  // persistState(), zodat hij een herlaad overleeft. Geldt voor beide richtingen samen.
+  let preferredPractice = null;
+  // Een net toegevoegd of bewerkt lesbestand is een moment, geen toestand: dit vervalt zodra
+  // je een ronde start en wordt daarom niet opgeslagen.
+  let fileChangedSinceRound = false;
 
   // Een onbekende opgeslagen waarde negeren: anders zou de dropdown leeg komen te staan
   // in plaats van op zijn standaardkeuze.
@@ -1050,6 +1056,7 @@
         orderMode: getOrderMode(),
         maxRound: getMaxRoundValue(),
         maxWrongSkipped: getMaxWrongSkipped(),
+        preferredPractice: preferredPractice || null,
         roundNumber: normalizeRoundNumber(roundNumber),
         words: combinedWords,
         sentences: combinedSentences,
@@ -1097,6 +1104,7 @@
     if (storedWrongSkipped) {
       setSelect(selMaxWrongSkipped, storedWrongSkipped);
     }
+    preferredPractice = (stored && stored.preferredPractice) || null;
     if (!stored || !hasDeck()) {
       startActions.classList.add("hidden");
       return;
@@ -1271,6 +1279,7 @@
     }
 
     if (addedNames.length) {
+      fileChangedSinceRound = true;
       const fileNames = (storedMeta.fileNames || []).concat(addedNames);
       persistState({ fileNames });
       renderFileList();
@@ -1625,6 +1634,7 @@
     }
     combinedWords = applyEditDraft(combinedWords, editDraft.words);
     combinedSentences = applyEditDraft(combinedSentences, editDraft.sentences);
+    fileChangedSinceRound = true;
     persistState({ fileNames: storedMeta.fileNames });
     closeEditScreen();
   });
@@ -1713,16 +1723,6 @@
     const keys = new Set((entry && entry.wrong) || []);
     if (keys.size === 0) return [];
     return deckItems().filter((item) => keys.has(itemKey(item)));
-  }
-
-  // Een lesbestand waarvan je nog geen enkel woord gezien hebt is een sterker signaal dan een
-  // paar losse nieuwe woorden: dat bestand wil je eerst een keer helemaal doorlopen. Een naam
-  // zonder bijbehorende woorden telt niet mee, anders zou een leeg bestand hier blijven hangen.
-  function hasUntouchedFile(dir = direction) {
-    return (storedMeta.fileNames || []).some((name) => {
-      const items = deckItems().filter((item) => item.file === name);
-      return items.length > 0 && items.every((item) => !hasStateFor(item, dir));
-    });
   }
 
   // Niet via ordered(): wrongItems() staat al op fout-teller gesorteerd, en die volgorde
@@ -2417,11 +2417,21 @@
     return PRACTICE_OPTIONS.find((option) => option.id === id);
   }
 
-  // Welke optie voorop staat. "Alle woorden" en "Alle nieuwe woorden" selecteren hetzelfde
-  // als er nog niets geoefend is; dan is de algemenere naam de duidelijkste.
+  // Welke optie voorop staat, sterkste signaal eerst. Zonder enige voortgang in deze richting
+  // is alles nieuw: dan is "Alle woorden" altijd de duidelijkste start. Daarna een lesbestand
+  // dat je net hebt toegevoegd of bewerkt: dat wil je in één keer doorlopen. Minder dan drie
+  // nieuwe woorden is daar te weinig voor; die pikt "Slim oefenen" vanzelf mee.
   function preferredOption(dir) {
     if (!hasProgressFor(dir)) return "all";
-    if (newItems(dir).length > 5 || hasUntouchedFile(dir)) return "new";
+    if (fileChangedSinceRound && newItems(dir).length >= 3) return "new";
+    // Een onthouden keuze die in deze richting niets meer oplevert is geen keuze meer: terug
+    // naar de generieke default, en vergeten, zodat hij later niet onverwacht terugkomt.
+    if (preferredPractice) {
+      const option = optionById(preferredPractice);
+      if (option && option.enabled(dir)) return preferredPractice;
+      preferredPractice = null;
+      if (hasDeck()) persistState();
+    }
     return "smart";
   }
 
@@ -2438,13 +2448,22 @@
       toggle.setAttribute("aria-expanded", String(isOpen));
     }
 
-    function choose(option) {
+    // remember alleen vanuit het menu: de hoofdknop herhaalt wat er al staat, dat is geen
+    // nieuwe voorkeur. "Nieuwe sessie" wist statistieken en mag nooit als hoofdknop klaarstaan.
+    function choose(option, remember) {
       open(false);
       if (!hasDeck()) return;
       const dir = getDirection();
       direction = dir;
+      if (remember && option.id !== "reset") {
+        preferredPractice = option.id;
+        persistState();
+      }
       // Bij een lege ronde blijft het startscherm staan, zodat het menu bereikbaar blijft.
-      if (option.run(dir)) startActions.classList.add("hidden");
+      if (option.run(dir)) {
+        fileChangedSinceRound = false;
+        startActions.classList.add("hidden");
+      }
     }
 
     toggle.addEventListener("click", (e) => {
@@ -2473,7 +2492,7 @@
         button.textContent = option.label;
         button.title = option.hint;
         button.disabled = !option.enabled(dir);
-        button.addEventListener("click", () => choose(option));
+        button.addEventListener("click", () => choose(option, true));
         menu.appendChild(button);
       }
       open(false);
