@@ -109,16 +109,9 @@
     color: var(--muted);
     margin-bottom: 8px;
   }
-  /* De split-button en het ?-icoon ernaast; op beide schermen hetzelfde blok. */
-  .split-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
   .split-button {
     position: relative;
     display: flex;
-    flex: 1 1 auto;
   }
   .btn-split-main {
     flex: 1 1 auto;
@@ -297,21 +290,6 @@
   .btn-exclude { background: var(--gold-bg); color: var(--gold); }
   .end-actions {
     margin-top: 20px;
-  }
-  .info-icon {
-    flex: 0 0 auto;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: #e5e7eb;
-    color: var(--muted);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.8rem;
-    font-weight: 700;
-    cursor: help;
-    user-select: none;
   }
   .btn-tostart-link {
     display: block;
@@ -507,6 +485,19 @@
     font-weight: 700;
     font-size: 0.9rem;
   }
+  /* De twee instellingen hieronder sturen alleen de selectie van "Slim oefenen". Een fijne
+     lijn met een klein kopje zet ze apart zonder er een eigen sectie van te maken; daarom
+     geen hoofdletters, anders weegt het even zwaar als .section-title erboven. Het kopje
+     beslaat de hele rij, zodat de label/dropdown-paren eronder niet opschuiven. */
+  .settings-subtitle {
+    grid-column: 1 / -1;
+    margin-top: 6px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--muted);
+  }
   /* Uitklapbare sectie met een eigen omlijsting; gebruikt voor de tips, die standaard
      dicht staan zodat het startscherm kort blijft. */
   .foldout {
@@ -681,13 +672,10 @@
     <div class="start-actions hidden" id="start-actions">
       <div class="start-info" id="resume-info"></div>
       <!-- Menu-inhoud komt uit PRACTICE_OPTIONS: beide schermen bieden dezelfde opties. -->
-      <div class="split-row">
-        <div class="split-button">
-          <button class="btn-split-main" id="btn-start-main" type="button"></button>
-          <button class="btn-split-toggle" id="btn-start-menu" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Meer oefenopties"></button>
-          <div class="split-menu hidden" id="start-menu" role="menu"></div>
-        </div>
-        <span class="info-icon" id="start-hint" tabindex="0">?</span>
+      <div class="split-button">
+        <button class="btn-split-main" id="btn-start-main" type="button"></button>
+        <button class="btn-split-toggle" id="btn-start-menu" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Meer oefenopties"></button>
+        <div class="split-menu hidden" id="start-menu" role="menu"></div>
       </div>
     </div>
     <section class="section">
@@ -710,7 +698,7 @@
           <option value="rev">Nederlands &rarr; Vreemde taal</option>
         </select>
 
-        <label class="setting-label" for="sel-sound-mode">Automatisch voorlezen<span class="hint-icon" tabindex="0" title="Bij &ldquo;Alleen voorlezen&rdquo; typ je niets: je hoort het woord, drukt op &ldquo;Weet ik&rdquo; of &ldquo;Weet ik niet&rdquo;, en na het antwoord gaat hij vanzelf door.">?</span></label>
+        <label class="setting-label" for="sel-sound-mode">Automatisch voorlezen</label>
         <select class="setting-select" id="sel-sound-mode">
           <option value="off">Uit</option>
           <option value="foreign" selected>Vreemde taal</option>
@@ -724,9 +712,10 @@
           <option value="original">Originele volgorde</option>
         </select>
 
-        <!-- Deze twee instellingen sturen alleen de selectie van "Slim oefenen"; de instellingen
-             erboven gelden voor elke ronde. Vandaar de uitleg in het vraagteken. -->
-        <label class="setting-label" for="sel-max-round">Max. woorden per ronde<span class="hint-icon" tabindex="0" title="Bepaalt alleen hoe &ldquo;Slim oefenen&rdquo; zijn ronde samenstelt. &ldquo;Alle woorden&rdquo; neemt altijd het hele deck, en een foutenronde altijd alle woorden die nog fout staan.">?</span></label>
+        <!-- Deze twee sturen alleen de selectie van "Slim oefenen"; de instellingen erboven
+             gelden voor elke ronde. -->
+        <div class="settings-subtitle">Slim oefenen</div>
+        <label class="setting-label" for="sel-max-round">Max. woorden per ronde<span class="hint-icon" tabindex="0" title="Een hoger getal geeft meer herhaling van bekende woorden; nieuwe woorden krijgen daarbij dus minder focus.">?</span></label>
         <select class="setting-select" id="sel-max-round">
           <option value="10" selected>10</option>
           <option value="20">20</option>
@@ -734,7 +723,7 @@
           <option value="all">Alle woorden</option>
         </select>
 
-        <label class="setting-label" for="sel-max-wrong-skipped">Max. foute/overgeslagen<span class="hint-icon" tabindex="0" title="Bepaalt alleen hoe &ldquo;Slim oefenen&rdquo; zijn ronde samenstelt: zoveel foute en overgeslagen woorden, aangevuld met woorden die weer aan de beurt zijn.">?</span></label>
+        <label class="setting-label" for="sel-max-wrong-skipped">Max. foute/overgeslagen<span class="hint-icon" tabindex="0" title="Maximaal aantal onbekende woorden waarop de focus ligt. Mensen kunnen typisch niet meer dan 5 tot 10 nieuwe woorden in een keer leren.">?</span></label>
         <select class="setting-select" id="sel-max-wrong-skipped">
           <option value="5" selected>5</option>
           <option value="7">7</option>
@@ -816,13 +805,10 @@
     <div class="warning hidden" id="empty-round"></div>
     <div class="end-actions">
       <!-- Menu-inhoud komt uit PRACTICE_OPTIONS: beide schermen bieden dezelfde opties. -->
-      <div class="split-row">
-        <div class="split-button">
-          <button class="btn-split-main" id="btn-end-main" type="button"></button>
-          <button class="btn-split-toggle" id="btn-end-menu" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Meer oefenopties"></button>
-          <div class="split-menu hidden" id="end-menu" role="menu"></div>
-        </div>
-        <span class="info-icon" id="end-hint" tabindex="0">?</span>
+      <div class="split-button">
+        <button class="btn-split-main" id="btn-end-main" type="button"></button>
+        <button class="btn-split-toggle" id="btn-end-menu" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Meer oefenopties"></button>
+        <div class="split-menu hidden" id="end-menu" role="menu"></div>
       </div>
 
       <button class="btn-tostart-link" id="btn-to-start" type="button">Naar startscherm</button>
@@ -2241,12 +2227,11 @@
   }
 
   // entries: [{ item, state, seen }]. Geeft de gekozen items terug, op relevantie gesorteerd.
-  // Nog nooit getoonde woorden gaan altijd allemaal mee, buiten het quotum en buiten het
-  // ronde-maximum om: ze komen alleen voor bij een nieuwe sessie of een net toegevoegd
-  // lesbestand, en dan wil je in één ronde zien welke woorden je al kent.
-  // maxWrongSkipped is het plafond voor foute woorden en voor foute + overgeslagen samen.
+  // maxWrongSkipped is het plafond voor alles wat je nog niet kent samen: foute, overgeslagen
+  // en nieuwe woorden. Zo neemt een net toegevoegd lesbestand de ronde niet over en blijft het
+  // aantal onbekende woorden per ronde leerbaar; de rest van de ronde gaat naar woorden die
+  // volgens het schema weer aan de beurt zijn.
   function selectSmartItems(entries, round, { cap, maxWrongSkipped }) {
-    const unseen = entries.filter((e) => !e.seen);
     const wrong = sortShuffled(entries.filter((e) => e.state.f > 0), (e) => -e.state.f);
     // Een opgeslagen staat zonder enig goed en zonder fout kan alleen van overslaan komen;
     // de laagste s hoort bij het woord dat het langst geleden is overgeslagen.
@@ -2254,31 +2239,38 @@
       entries.filter((e) => e.seen && e.state.f === 0 && e.state.g === 0),
       (e) => e.state.s
     );
+    // Niet geschud: zo werk je een nieuw lesbestand van voor naar achter door, in plaats van
+    // er elke ronde een willekeurige greep uit te doen.
+    const unseen = entries.filter((e) => !e.seen);
     const known = entries.filter((e) => e.state.f === 0 && e.state.g > 0);
     const due = sortShuffled(known.filter((e) => e.state.s <= round), (e) => e.state.s);
     const later = sortShuffled(known.filter((e) => e.state.s > round), (e) => e.state.s);
 
-    // Foute woorden gaan voor, dus zodra er maxWrongSkipped fout staan blijft er geen
-    // ruimte voor overgeslagen woorden: eerst de stapel wegwerken.
+    // Het quotum gaat op volgorde van urgentie: fout, dan overgeslagen, dan nieuw. Staat de
+    // foutenstapel vol, dan komen er dus even geen nieuwe woorden bij — eerst die stapel
+    // wegwerken. Wie daar niet op wil wachten kiest "Alle nieuwe woorden".
     const wrongRoom = Math.min(wrong.length, maxWrongSkipped);
     const skipRoom = Math.min(skippedPool.length, maxWrongSkipped - wrongRoom);
+    const newRoom = Math.min(unseen.length, maxWrongSkipped - wrongRoom - skipRoom);
 
-    // Foute en overgeslagen woorden tellen alleen mee tot hun quotum, zodat een volle
-    // foutenstapel de ronde niet eindeloos laat groeien.
-    const load = known.reduce((sum, e) => sum + weightFor(e.state), wrongRoom + skipRoom);
+    // Onbekende woorden tellen alleen mee tot hun quotum, zodat een volle foutenstapel of een
+    // vers lesbestand de ronde niet eindeloos laat groeien.
+    const load = known.reduce((sum, e) => sum + weightFor(e.state), wrongRoom + skipRoom + newRoom);
     const minItems = Math.min(SMART_MIN_ITEMS, cap, entries.length);
     const target = Math.max(minItems, Math.min(cap, Math.round(load)));
 
     // Op tijd aanvullen met woorden die aan de beurt zijn; daarna met woorden die
     // eigenlijk pas later gepland staan, dichtstbijzijnde ronde eerst.
-    const chosen = wrong.slice(0, wrongRoom).concat(skippedPool.slice(0, skipRoom));
+    const chosen = wrong.slice(0, wrongRoom)
+      .concat(skippedPool.slice(0, skipRoom))
+      .concat(unseen.slice(0, newRoom));
     for (const pool of [due, later]) {
       for (const entry of pool) {
         if (chosen.length >= target) break;
         chosen.push(entry);
       }
     }
-    return unseen.concat(chosen.slice(0, cap)).map((e) => e.item);
+    return chosen.slice(0, cap).map((e) => e.item);
   }
 
   // Woorden op 'niet meer oefenen' vallen hier af en niet in selectSmartItems: zo tellen
@@ -2377,7 +2369,7 @@
     {
       id: "smart",
       label: "Slim oefenen",
-      hint: "Toont het ingestelde aantal foute/overgeslagen woorden, aangevuld met goede woorden die volgens het schema weer aan de beurt zijn. Hoe vaker je een woord goed hebt, hoe langer het wegblijft. Woorden die op 'niet meer oefenen' staan worden niet meer getoond.",
+      hint: "Toont het ingestelde aantal nog onbekende woorden — eerst foute, dan overgeslagen, dan nieuwe — aangevuld met goede woorden die volgens het schema weer aan de beurt zijn. Hoe vaker je een woord goed hebt, hoe langer het wegblijft. Woorden die op 'niet meer oefenen' staan worden niet meer getoond.",
       enabled: () => hasDeck(),
       run: () => startSmartRound(),
     },
@@ -2457,7 +2449,6 @@
     const main = document.getElementById(`btn-${prefix}-main`);
     const toggle = document.getElementById(`btn-${prefix}-menu`);
     const menu = document.getElementById(`${prefix}-menu`);
-    const hintIcon = document.getElementById(`${prefix}-hint`);
 
     function open(isOpen) {
       menu.classList.toggle("hidden", !isOpen);
@@ -2488,7 +2479,6 @@
       const preferred = optionById(preferredOption(dir));
       main.dataset.option = preferred.id;
       main.textContent = preferred.label;
-      hintIcon.title = preferred.hint;
 
       menu.innerHTML = "";
       for (const option of PRACTICE_OPTIONS) {
