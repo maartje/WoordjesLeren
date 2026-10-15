@@ -273,13 +273,12 @@
   /* 'Alleen voorlezen': je typt niet en je leest niet mee. Het scherm blijft van woord tot
      woord hetzelfde; alles wat er na een antwoord bij zou komen hoor je in plaats daarvan. */
   #screen-quiz.listen-mode .answer-wrap,
-  #screen-quiz.listen-mode #feedback,
-  #screen-quiz.listen-mode #answer-actions,
-  #screen-quiz.listen-mode #btn-next { display: none; }
+  #screen-quiz.listen-mode .feedback-slot,
+  #screen-quiz.listen-mode .after-answer { display: none; }
   .buttons {
     display: flex;
     gap: 10px;
-    margin-top: 18px;
+    margin-top: 8px;
     flex-wrap: wrap;
   }
   button {
@@ -309,12 +308,22 @@
   .btn-check { background: var(--accent); color: #fff; }
   .btn-know { background: #e7edfc; color: var(--accent-dark); }
   .btn-dontknow { background: #f3f4f6; color: #4b5563; }
-  .btn-next { background: var(--text); color: #fff; width: 100%; margin-top: 16px; }
+  /* In de rol van 'Volgende' ziet deze knop eruit als 'Volgende'. */
+  .btn-dontknow.as-next { background: var(--text); color: #fff; }
+  .btn-next { background: var(--text); color: #fff; width: 100%; }
+  /* De plek onder de knoppen is er altijd, ook als er niets staat: 'Volgende' en de correcties
+     na 'Weet ik' passen er allebei in zonder dat de kaart van hoogte verandert. */
+  .after-answer {
+    min-height: 41px;
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
   /* Correcties na 'Weet ik': kleiner en secundair, zodat 'Volgende' de blikvanger blijft. */
   .answer-actions {
     display: flex;
     gap: 10px;
-    margin-top: 10px;
   }
   .answer-actions button {
     font-size: 0.85rem;
@@ -338,19 +347,21 @@
     text-align: center;
   }
   .btn-tostart-link:hover { background: none; filter: none; color: var(--text); }
+  /* Het scherm mag niet verspringen zodra er een antwoord staat: deze plek is er altijd,
+     met ruimte voor een regel antwoord. Het antwoord staat dicht tegen het veld aan - het
+     hoort bij wat je net typte - en de knoppen staan er vlak onder. */
+  .feedback-slot { min-height: 40px; margin-top: 10px; }
   .feedback {
-    margin-top: 18px;
-    padding: 14px 16px;
-    border-radius: 10px;
+    padding: 4px 0;
     font-size: 1rem;
     line-height: 1.5;
     display: none;
   }
-  /* Goed is geen mededeling maar een bevestiging: een vinkje met het antwoord is genoeg. De
-     verticale padding blijft staan, zodat het scherm niet verspringt tussen goed en fout. */
-  .feedback.good { display: block; background: none; color: var(--good); padding-left: 0; padding-right: 0; }
-  .feedback-check { font-weight: 700; margin-right: 8px; }
-  .feedback.bad { display: block; background: var(--bad-bg); color: var(--bad); }
+  /* Goed of fout is geen mededeling maar een bevestiging: een teken met het juiste antwoord
+     zegt het al. Beide kanten zien er hetzelfde uit, alleen de kleur verschilt. */
+  .feedback.good { display: block; color: var(--good); }
+  .feedback.bad { display: block; color: var(--bad); }
+  .feedback-mark { font-weight: 700; margin-right: 8px; }
   .feedback b { font-weight: 700; }
   .score-line {
     font-size: 1.3rem;
@@ -841,16 +852,24 @@
         </svg>
       </button>
     </div>
+    <!-- De terugkoppeling hoort bij wat je net typte, dus staat hij direct onder het veld.
+         De omhullende div houdt die plek vrij, ook als er nog niets staat. -->
+    <div class="feedback-slot">
+      <div class="feedback" id="feedback"></div>
+    </div>
     <div class="buttons">
       <button class="btn-know" id="btn-know">Weet ik</button>
       <button class="btn-dontknow" id="btn-dontknow">Weet ik niet</button>
     </div>
-    <div class="feedback" id="feedback"></div>
-    <div class="answer-actions hidden" id="answer-actions">
-      <button class="btn-wrong-after-all" id="btn-wrong-after-all" type="button">Toch fout</button>
-      <button class="btn-exclude" id="btn-exclude" type="button">Niet meer oefenen</button>
+    <!-- Wat pas na een antwoord verschijnt, heeft hier een vaste plek: zo blijft de kaart
+         even hoog en schuift de vraag niet op. -->
+    <div class="after-answer">
+      <div class="answer-actions hidden" id="answer-actions">
+        <button class="btn-wrong-after-all" id="btn-wrong-after-all" type="button">Toch fout</button>
+        <button class="btn-exclude" id="btn-exclude" type="button">Niet meer oefenen</button>
+      </div>
+      <button class="btn-next hidden" id="btn-next">Volgende &rarr;</button>
     </div>
-    <button class="btn-next hidden" id="btn-next">Volgende &rarr;</button>
   </div>
 
   <!-- Eindscherm -->
@@ -995,6 +1014,7 @@
   let answersRevealed = false;
   let preAnswerState = null; // staat van vóór het huidige antwoord, voor 'Toch fout'
   let canCorrect = false; // alleen na 'Weet ik' kun je jezelf nog corrigeren
+  let dontKnowIsNext = false; // na 'Weet ik niet' is die knop de 'Volgende'-knop geworden
   let direction = "fwd";
   let soundMode = "foreign";
   let advanceGen = 0;        // elke sprong maakt een nog lopende automatische sprong ongeldig
@@ -1868,6 +1888,10 @@
     canCorrect = false;
     preAnswerState = null;
     btnNext.classList.add("hidden");
+    dontKnowIsNext = false;
+    btnKnow.classList.remove("hidden");
+    btnDontKnow.classList.remove("as-next");
+    btnDontKnow.textContent = "Weet ik niet";
     // Het invoerveld is verborgen in 'Alleen voorlezen' en kan dan geen focus krijgen;
     // 'Weet ik' wel, zodat de toetsenbordflow Enter - Enter per woord blijft.
     if (isListenMode()) btnKnow.focus(); else answerInput.focus();
@@ -1953,8 +1977,16 @@
     return true;
   }
 
-  const AUTO_ADVANCE_SILENT_MS = 900;  // niets te horen: toch even wachten voor het ritme
-  const AUTO_ADVANCE_MAX_MS = 6000;    // vangnet: 'onend' komt niet in elke browser
+  const AUTO_ADVANCE_BASE_MS = 1000;      // basispauze, ook bij een antwoord van een woord
+  const AUTO_ADVANCE_PER_WORD_MS = 250;   // meer woorden wil je langer kunnen lezen
+  const AUTO_ADVANCE_READ_MAX_MS = 3000;  // maar nooit zo lang dat je zit te wachten
+  const AUTO_ADVANCE_MAX_MS = 6000;       // vangnet: 'onend' komt niet in elke browser
+
+  // Hoe lang het antwoord blijft staan als er niets te horen is: lezen kost tijd per woord.
+  function readingPauseMs(text) {
+    const woorden = String(text || "").trim().split(/\s+/).filter(Boolean).length;
+    return Math.min(AUTO_ADVANCE_BASE_MS + woorden * AUTO_ADVANCE_PER_WORD_MS, AUTO_ADVANCE_READ_MAX_MS);
+  }
 
   // Spreekt het antwoord uit en springt door zodra dat klaar is.
   function speakAnswerThenAdvance(text, lang) {
@@ -1966,7 +1998,7 @@
       goToNextItem();
     };
     const spoke = shouldSpeak(lang) && speak(text, lang, go);
-    window.setTimeout(go, spoke ? AUTO_ADVANCE_MAX_MS : AUTO_ADVANCE_SILENT_MS);
+    window.setTimeout(go, spoke ? AUTO_ADVANCE_MAX_MS : readingPauseMs(text));
   }
 
   btnSpeak.addEventListener("click", () => {
@@ -2035,11 +2067,11 @@
     if (correct) {
       score += 1;
       feedbackEl.className = "feedback good";
-      feedbackEl.innerHTML = `<span class="feedback-check">&#10003;</span><b>${escapeHtml(answerText)}</b>`;
+      feedbackEl.innerHTML = `<span class="feedback-mark">&#10003;</span><b>${escapeHtml(answerText)}</b>`;
     } else {
       mistakes.push(item);
       feedbackEl.className = "feedback bad";
-      feedbackEl.innerHTML = `Fout. Het juiste antwoord was: <b>${escapeHtml(answerText)}</b>`;
+      feedbackEl.innerHTML = `<span class="feedback-mark">&#10007;</span><b>${escapeHtml(answerText)}</b>`;
     }
 
     scoreText.textContent = `Score: ${score}`;
@@ -2057,6 +2089,19 @@
     } else if (shouldSpeak(answerLang(item))) {
       speak(answerText, answerLang(item));
     }
+  }
+
+  // Na 'Weet ik niet' staat je muis al op die knop: laat hem daar 'Volgende' worden, dan ga je
+  // met dezelfde beweging verder. 'Weet ik' valt weg, want er valt niets meer te weten.
+  function showDontKnowAsNext() {
+    if (isListenMode()) return; // daar blijft het scherm staan en springt hij vanzelf door
+    dontKnowIsNext = true;
+    btnKnow.classList.add("hidden");
+    btnNext.classList.add("hidden"); // anders staat 'Volgende' er twee keer
+    btnDontKnow.disabled = false;    // markAnswered() zette hem net uit
+    btnDontKnow.classList.add("as-next");
+    btnDontKnow.textContent = "Volgende \u2192";
+    btnDontKnow.focus();             // zo werkt Enter ook, net als bij de gewone knop
   }
 
   function showAnswerActions(item) {
@@ -2086,7 +2131,9 @@
   });
 
   btnDontKnow.addEventListener("click", () => {
+    if (dontKnowIsNext) return goToNextItem();
     handleResult(false);
+    showDontKnowAsNext();
   });
 
   answerInput.addEventListener("keydown", (e) => {
@@ -2114,7 +2161,7 @@
     mistakes.push(item); // item staat al in answeredItems
     scoreText.textContent = `Score: ${score}`;
     feedbackEl.className = "feedback bad";
-    feedbackEl.innerHTML = `Fout. Het juiste antwoord was: <b>${escapeHtml(answerWord(item))}</b>`;
+    feedbackEl.innerHTML = `<span class="feedback-mark">&#10007;</span><b>${escapeHtml(answerWord(item))}</b>`;
     // Een fout antwoord heft 'niet meer oefenen' op, dus die knop heeft hier geen zin meer.
     answerActions.classList.add("hidden");
     btnNext.focus();
