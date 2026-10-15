@@ -346,7 +346,10 @@
     line-height: 1.5;
     display: none;
   }
-  .feedback.good { display: block; background: var(--good-bg); color: var(--good); }
+  /* Goed is geen mededeling maar een bevestiging: een vinkje met het antwoord is genoeg. De
+     verticale padding blijft staan, zodat het scherm niet verspringt tussen goed en fout. */
+  .feedback.good { display: block; background: none; color: var(--good); padding-left: 0; padding-right: 0; }
+  .feedback-check { font-weight: 700; margin-right: 8px; }
   .feedback.bad { display: block; background: var(--bad-bg); color: var(--bad); }
   .feedback b { font-weight: 700; }
   .score-line {
@@ -1880,6 +1883,13 @@
     advanceGen += 1;
   }
 
+  // Kies je na een goed antwoord alsnog iets, dan hoort het scherm te blijven staan: de
+  // automatische sprong vervalt en je gaat weer met de hand verder.
+  function stopAutoAdvance() {
+    cancelAutoAdvance();
+    btnNext.classList.remove("hidden");
+  }
+
   function goToNextItem() {
     cancelAutoAdvance();
     currentIndex += 1;
@@ -1965,7 +1975,7 @@
   });
 
   // ---------- Answer handling ----------
-  function markAnswered() {
+  function markAnswered(autoAdvance) {
     answered = true;
     // In 'Alleen voorlezen' blijft het scherm staan zoals het staat: geen antwoord in beeld,
     // geen 'Volgende', en de knoppen vergrijzen niet tijdens de korte pauze. Verdere klikken
@@ -1975,6 +1985,8 @@
     btnCheck.disabled = true;
     btnKnow.disabled = true;
     btnDontKnow.disabled = true;
+    // Springt hij zo vanzelf door, dan valt er niets te kiezen: geen 'Volgende' in beeld.
+    if (autoAdvance) return;
     btnNext.classList.remove("hidden");
     btnNext.focus();
   }
@@ -2023,7 +2035,7 @@
     if (correct) {
       score += 1;
       feedbackEl.className = "feedback good";
-      feedbackEl.innerHTML = `Goed! <b>${escapeHtml(answerText)}</b>`;
+      feedbackEl.innerHTML = `<span class="feedback-check">&#10003;</span><b>${escapeHtml(answerText)}</b>`;
     } else {
       mistakes.push(item);
       feedbackEl.className = "feedback bad";
@@ -2031,13 +2043,16 @@
     }
 
     scoreText.textContent = `Score: ${score}`;
-    markAnswered();
+    markAnswered(correct);
 
     // In 'Alleen voorlezen' is er geen moment meer om te corrigeren: hij springt vanzelf door.
     canCorrect = Boolean(fromKnow) && correct && !isListenMode();
     if (canCorrect) showAnswerActions(item);
 
-    if (isListenMode()) {
+    // Na een goed antwoord valt er niets meer te doen: het antwoord wordt eventueel uitgesproken
+    // en daarna springt hij vanzelf door, net als in 'Alleen voorlezen'. Alleen na een fout blijft
+    // het scherm staan, want dan wil je het juiste antwoord rustig kunnen lezen.
+    if (isListenMode() || correct) {
       speakAnswerThenAdvance(answerText, answerLang(item));
     } else if (shouldSpeak(answerLang(item))) {
       speak(answerText, answerLang(item));
@@ -2090,6 +2105,7 @@
 
   btnWrongAfterAll.addEventListener("click", () => {
     if (!canCorrect) return;
+    stopAutoAdvance();
     canCorrect = false;
     const item = currentItem();
     // Opnieuw rekenen vanaf de staat van vóór 'Weet ik', niet 'eerst goed en dan fout'.
@@ -2105,6 +2121,7 @@
   });
 
   btnExclude.addEventListener("click", () => {
+    stopAutoAdvance();
     const item = currentItem();
     setExcluded(item, !stateFor(item).x);
     updateExcludeLabel(item);
