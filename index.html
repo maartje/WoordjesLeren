@@ -20,6 +20,9 @@
     --bad-bg: #fdeceb;
     --gold: #b8860b;
     --gold-bg: #fdf3d8;
+    /* Rood en goud zoals ze op de donkere melding leesbaar blijven. */
+    --bad-light: #ff8f85;
+    --gold-light: #f3c969;
     --border: #e2e5ec;
   }
   * { box-sizing: border-box; }
@@ -311,26 +314,44 @@
   /* In de rol van 'Volgende' ziet deze knop eruit als 'Volgende'. */
   .btn-dontknow.as-next { background: var(--text); color: #fff; }
   .btn-next { background: var(--text); color: #fff; width: 100%; }
-  /* De plek onder de knoppen is er altijd, ook als er niets staat: 'Volgende' en de correcties
-     na 'Weet ik' passen er allebei in zonder dat de kaart van hoogte verandert. */
+  /* De plek voor 'Volgende' is er altijd, ook als die knop er niet staat: zo verandert de kaart
+     niet van hoogte zodra hij verschijnt. */
   .after-answer {
     min-height: 41px;
     margin-top: 16px;
+  }
+  /* De melding na 'Weet ik' staat los van de kaart, onderin beeld: hij hoort bij het woord dat
+     net voorbijkwam, niet bij de vraag die er nu staat. De keuzes erin zijn links, geen knoppen:
+     ze vragen geen aandacht, maar ze zijn er als je ze nodig hebt. */
+  .toast {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    max-width: calc(100% - 48px);
     display: flex;
-    flex-direction: column;
-    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 20px;
+    padding: 14px 18px;
+    border-radius: 12px;
+    background: var(--text);
+    color: #fff;
+    box-shadow: 0 15px 40px rgba(20, 32, 62, 0.22);
   }
-  /* Correcties na 'Weet ik': kleiner en secundair, zodat 'Volgende' de blikvanger blijft. */
-  .answer-actions {
-    display: flex;
-    gap: 10px;
+  .toast-message { margin: 0; font-size: 0.9rem; }
+  .toast-actions { display: flex; flex-wrap: wrap; gap: 6px 20px; }
+  .toast-actions button {
+    flex: none;
+    padding: 0;
+    background: none;
+    font-size: 0.9rem;
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
-  .answer-actions button {
-    font-size: 0.85rem;
-    padding: 8px 12px;
-  }
-  .btn-wrong-after-all { background: var(--bad-bg); color: var(--bad); }
-  .btn-exclude { background: var(--gold-bg); color: var(--gold); }
+  /* Fout is rood en bekend is goud, net als het kruisje en het 'niet meer oefenen' elders. */
+  #btn-wrong-after-all { color: var(--bad-light); }
+  #btn-exclude { color: var(--gold-light); }
+  .toast-actions button:hover { color: #fff; filter: none; }
   .end-actions {
     margin-top: 20px;
   }
@@ -702,6 +723,18 @@
     }
     .settings .setting-label + .setting-select { margin-bottom: 8px; }
   }
+  /* Op een smal scherm past de melding niet meer naast zichzelf: over de volle breedte. */
+  @media (max-width: 520px) {
+    .toast {
+      right: 16px;
+      bottom: 16px;
+      left: 16px;
+      max-width: none;
+      align-items: flex-start;
+      flex-direction: column;
+      gap: 10px;
+    }
+  }
   /* Op een smal scherm zijn twee velden naast elkaar te krap voor hele zinnen. */
   @media (max-width: 520px) {
     .edit-row {
@@ -864,10 +897,6 @@
     <!-- Wat pas na een antwoord verschijnt, heeft hier een vaste plek: zo blijft de kaart
          even hoog en schuift de vraag niet op. -->
     <div class="after-answer">
-      <div class="answer-actions hidden" id="answer-actions">
-        <button class="btn-wrong-after-all" id="btn-wrong-after-all" type="button">Toch fout</button>
-        <button class="btn-exclude" id="btn-exclude" type="button">Niet meer oefenen</button>
-      </div>
       <button class="btn-next hidden" id="btn-next">Volgende &rarr;</button>
     </div>
   </div>
@@ -932,6 +961,16 @@
 
 </div>
 
+<!-- Na 'Weet ik' ben je al bij het volgende woord. Deze melding blijft nog even staan, zodat je
+     alsnog iets kunt kiezen over het woord dat net voorbijkwam. -->
+<div class="toast hidden" id="toast" role="status" aria-live="polite">
+  <p class="toast-message" id="toast-message"></p>
+  <div class="toast-actions" id="toast-actions">
+    <button id="btn-wrong-after-all" type="button">Markeer als fout</button>
+    <button id="btn-exclude" type="button">Markeer als bekend (niet meer tonen)</button>
+  </div>
+</div>
+
 <dialog class="confirm-dialog" id="confirm-new-session">
   <div class="confirm-title">Nieuwe sessie starten?</div>
   <div class="confirm-text">Je voortgang voor deze richting wordt gewist en je begint weer met het hele deck. De lesbestanden blijven staan.</div>
@@ -966,7 +1005,9 @@
   const btnDontKnow = document.getElementById("btn-dontknow");
   const btnNext = document.getElementById("btn-next");
   const feedbackEl = document.getElementById("feedback");
-  const answerActions = document.getElementById("answer-actions");
+  const toastEl = document.getElementById("toast");
+  const toastMessage = document.getElementById("toast-message");
+  const toastActions = document.getElementById("toast-actions");
   const btnWrongAfterAll = document.getElementById("btn-wrong-after-all");
   const btnExclude = document.getElementById("btn-exclude");
 
@@ -1013,7 +1054,9 @@
   let answered = false;
   let answersRevealed = false;
   let preAnswerState = null; // staat van vóór het huidige antwoord, voor 'Toch fout'
-  let canCorrect = false; // alleen na 'Weet ik' kun je jezelf nog corrigeren
+  let toastItem = null; // het woord waar de melding over gaat; dat is er al eentje terug
+  let toastPreState = null; // staat van vóór dat antwoord, voor 'Toch fout'
+  let toastTimer = 0;
   let dontKnowIsNext = false; // na 'Weet ik niet' is die knop de 'Volgende'-knop geworden
   let direction = "fwd";
   let soundMode = "foreign";
@@ -1884,8 +1927,6 @@
     btnDontKnow.disabled = false;
     feedbackEl.className = "feedback";
     feedbackEl.textContent = "";
-    answerActions.classList.add("hidden");
-    canCorrect = false;
     preAnswerState = null;
     btnNext.classList.add("hidden");
     dontKnowIsNext = false;
@@ -1905,13 +1946,6 @@
   // zodat een vangnet-timer of de 'onend' van een afgebroken zin niet alsnog doorklikt.
   function cancelAutoAdvance() {
     advanceGen += 1;
-  }
-
-  // Kies je na een goed antwoord alsnog iets, dan hoort het scherm te blijven staan: de
-  // automatische sprong vervalt en je gaat weer met de hand verder.
-  function stopAutoAdvance() {
-    cancelAutoAdvance();
-    btnNext.classList.remove("hidden");
   }
 
   function goToNextItem() {
@@ -2054,10 +2088,9 @@
     persistState();
   }
 
-  // fromKnow: alleen bij 'Weet ik' weet de app niet wat je echt geantwoord hebt, dus
-  // alleen daar bied je de correctieknoppen aan.
-  function handleResult(correct, fromKnow) {
+  function handleResult(correct) {
     if (answered) return;
+    hideToast(); // de melding gaat over het vorige woord; dat is nu voorbij
     const item = currentItem();
     const answerText = answerWord(item);
     preAnswerState = stateFor(item);
@@ -2077,9 +2110,9 @@
     scoreText.textContent = `Score: ${score}`;
     markAnswered(correct);
 
-    // In 'Alleen voorlezen' is er geen moment meer om te corrigeren: hij springt vanzelf door.
-    canCorrect = Boolean(fromKnow) && correct && !isListenMode();
-    if (canCorrect) showAnswerActions(item);
+    // Elk goed woord kun je nog bijsturen: je gokte misschien goed, of je kent het allang.
+    // In 'Alleen voorlezen' niet, want daar antwoord je zelf niets.
+    if (correct && !isListenMode()) showKnowToast(item);
 
     // Na een goed antwoord valt er niets meer te doen: het antwoord wordt eventueel uitgesproken
     // en daarna springt hij vanzelf door, net als in 'Alleen voorlezen'. Alleen na een fout blijft
@@ -2104,13 +2137,40 @@
     btnDontKnow.focus();             // zo werkt Enter ook, net als bij de gewone knop
   }
 
-  function showAnswerActions(item) {
-    updateExcludeLabel(item);
-    answerActions.classList.remove("hidden");
+  // Een fout getypt antwoord is meestal een tikfout. Je krijgt het juiste antwoord dus niet te
+  // zien maar een nieuwe kans; pas via 'Weet ik niet' telt het woord echt als fout.
+  function showRetry() {
+    feedbackEl.className = "feedback bad";
+    feedbackEl.textContent = "Niet correct, probeer het opnieuw.";
+    answerInput.focus(); // de tekst blijft staan, zodat je de fout kunt herstellen
   }
 
-  function updateExcludeLabel(item) {
-    btnExclude.textContent = stateFor(item).x ? "Weer oefenen" : "Niet meer oefenen";
+  const TOAST_MS = 8000;      // lang genoeg om het volgende woord te lezen en terug te klikken
+  const TOAST_DONE_MS = 2500; // na een keuze alleen nog de bevestiging
+
+  // Na 'Weet ik' springt het scherm door; deze melding houdt het woord nog even vast, zodat je
+  // het alsnog fout kunt rekenen of kunt uitzetten.
+  function showKnowToast(item) {
+    toastItem = item;
+    toastPreState = preAnswerState;
+    toastMessage.innerHTML = `Woord wordt gemarkeerd als goed: <b>${escapeHtml(promptWord(item))}</b> &rarr; ${escapeHtml(answerWord(item))}`;
+    btnExclude.textContent = stateFor(item).x
+      ? "Markeer als onbekend (weer tonen)"
+      : "Markeer als bekend (niet meer tonen)";
+    toastActions.classList.remove("hidden");
+    toastEl.classList.remove("hidden");
+    startToastTimer(TOAST_MS);
+  }
+
+  function startToastTimer(ms) {
+    window.clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(hideToast, ms);
+  }
+
+  function hideToast() {
+    window.clearTimeout(toastTimer);
+    toastEl.classList.add("hidden");
+    toastItem = null;
   }
 
   function escapeHtml(str) {
@@ -2122,12 +2182,15 @@
   btnCheck.addEventListener("click", () => {
     if (answered) return;
     const item = currentItem();
-    const correct = isCorrectAnswer(answerInput.value, answerWord(item));
-    handleResult(correct);
+    if (isCorrectAnswer(answerInput.value, answerWord(item))) {
+      handleResult(true);
+      return;
+    }
+    showRetry();
   });
 
   btnKnow.addEventListener("click", () => {
-    handleResult(true, true);
+    handleResult(true);
   });
 
   btnDontKnow.addEventListener("click", () => {
@@ -2151,33 +2214,37 @@
   });
 
   btnWrongAfterAll.addEventListener("click", () => {
-    if (!canCorrect) return;
-    stopAutoAdvance();
-    canCorrect = false;
-    const item = currentItem();
+    if (!toastItem) return;
+    const item = toastItem;
+    toastItem = null; // één keer corrigeren is genoeg
     // Opnieuw rekenen vanaf de staat van vóór 'Weet ik', niet 'eerst goed en dan fout'.
-    recordStat(item, false, preAnswerState);
+    recordStat(item, false, toastPreState);
     score -= 1;
     mistakes.push(item); // item staat al in answeredItems
     scoreText.textContent = `Score: ${score}`;
-    feedbackEl.className = "feedback bad";
-    feedbackEl.innerHTML = `<span class="feedback-mark">&#10007;</span><b>${escapeHtml(answerWord(item))}</b>`;
-    // Een fout antwoord heft 'niet meer oefenen' op, dus die knop heeft hier geen zin meer.
-    answerActions.classList.add("hidden");
-    btnNext.focus();
+    toastMessage.innerHTML = `Woord is gemarkeerd als fout: <b>${escapeHtml(promptWord(item))}</b>`;
+    // Een fout antwoord heft 'niet meer oefenen' op, dus die keuze heeft hier geen zin meer.
+    toastActions.classList.add("hidden");
+    startToastTimer(TOAST_DONE_MS);
   });
 
   btnExclude.addEventListener("click", () => {
-    stopAutoAdvance();
-    const item = currentItem();
-    setExcluded(item, !stateFor(item).x);
-    updateExcludeLabel(item);
+    if (!toastItem) return;
+    const item = toastItem;
+    const excluded = !stateFor(item).x;
+    setExcluded(item, excluded);
+    toastMessage.innerHTML = excluded
+      ? `Woord is gemarkeerd als bekend: <b>${escapeHtml(promptWord(item))}</b>`
+      : `Woord wordt weer getoond: <b>${escapeHtml(promptWord(item))}</b>`;
+    toastActions.classList.add("hidden");
+    startToastTimer(TOAST_DONE_MS);
   });
 
   btnNext.addEventListener("click", goToNextItem);
 
   // ---------- End screen ----------
   function showEndScreen() {
+    hideToast(); // een correctie achteraf zou het eindscherm niet meer bijwerken
     showScreen(screenEnd);
     answersRevealed = false;
 
