@@ -24,6 +24,12 @@
     --bad-light: #ff8f85;
     --gold-light: #f3c969;
     --border: #e2e5ec;
+    /* Randen en hover-tinten voor de getinte knoppen; dezelfde kleur, iets dieper. */
+    --good-border: #bfe6cf;
+    --good-bg-hover: #d6f2e2;
+    --bad-border: #f6cdc9;
+    --bad-bg-hover: #fbdfdc;
+    --focus-ring: rgba(59, 109, 240, 0.4);
   }
   * { box-sizing: border-box; }
   body {
@@ -281,7 +287,7 @@
   .buttons {
     display: flex;
     gap: 10px;
-    margin-top: 8px;
+    margin-top: 12px;
     flex-wrap: wrap;
   }
   button {
@@ -296,6 +302,8 @@
     flex: 1 1 auto;
   }
   button:disabled { opacity: 0.5; cursor: default; }
+  /* Waar de focus staat moet te zien zijn: de app verplaatst hem zelf na een antwoord. */
+  button:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
   /* Het logo is een knop: terug naar het startscherm. Alleen terugdraaien wat de algemene
      button-regel aan vorm en vulling geeft; de hover-helderheid daarvan blijft juist staan. */
   .logo-home {
@@ -309,10 +317,41 @@
   }
   button:not(:disabled):hover { filter: brightness(1.08); }
   .btn-check { background: var(--accent); color: #fff; }
-  .btn-know { background: #e7edfc; color: var(--accent-dark); }
-  .btn-dontknow { background: #f3f4f6; color: #4b5563; }
-  /* In de rol van 'Volgende' ziet deze knop eruit als 'Volgende'. */
-  .btn-dontknow.as-next { background: var(--text); color: #fff; }
+  /* De twee uitwegen krijgen de kleur van hun eigen afloop: groen met een vinkje rekent het
+     woord goed, rood met een kruisje rekent het fout. Zo staat op de knop al wat er zo
+     meteen onder het veld komt te staan. */
+  .btn-know,
+  .btn-dontknow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px solid transparent;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease,
+                transform 0.1s ease, opacity 0.1s ease;
+  }
+  /* Het teken komt uit CSS, niet uit de HTML: de knop krijgt verderop een nieuwe tekst,
+     en die zou een element in de knop wissen. */
+  .btn-know::before { content: "\2713"; font-weight: 700; font-size: 1.05em; line-height: 1; }
+  .btn-dontknow::before { content: "\2717"; font-weight: 700; font-size: 1.05em; line-height: 1; }
+  .btn-know { background: var(--good-bg); color: var(--good); border-color: var(--good-border); }
+  .btn-dontknow { background: var(--bad-bg); color: var(--bad); border-color: var(--bad-border); }
+  /* De algemene hover-helderheid doet op zulke bleke vlakken niets zichtbaars; hier verdiept
+     in plaats daarvan de vulling zelf. */
+  .btn-know:not(:disabled):hover,
+  .btn-dontknow:not(:disabled):hover { filter: none; }
+  .btn-know:not(:disabled):hover { background: var(--good-bg-hover); border-color: var(--good); }
+  .btn-dontknow:not(:disabled):hover { background: var(--bad-bg-hover); border-color: var(--bad); }
+  .btn-know:not(:disabled):active,
+  .btn-dontknow:not(:disabled):active { transform: translateY(1px); }
+  /* In de rol van 'Volgende' ziet deze knop eruit als 'Volgende': geen kruisje, geen rood. */
+  .btn-dontknow.as-next {
+    background: var(--text);
+    color: #fff;
+    border-color: var(--text);
+  }
+  .btn-dontknow.as-next::before { content: none; }
+  .btn-dontknow.as-next:not(:disabled):hover { background: #2b3246; border-color: #2b3246; }
   .btn-next { background: var(--text); color: #fff; width: 100%; }
   /* De plek voor 'Volgende' is er altijd, ook als die knop er niet staat: zo verandert de kaart
      niet van hoogte zodra hij verschijnt. */
@@ -336,7 +375,16 @@
     border-radius: 12px;
     background: var(--text);
     color: #fff;
-    box-shadow: 0 15px 40px rgba(20, 32, 62, 0.22);
+    box-shadow: 0 15px 40px rgba(20, 30, 60, 0.22);
+    /* De melding hoort binnen te komen, niet te knipperen. Omdat .hidden display uitzet,
+       gaat die stap discreet mee in de overgang. */
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 0.18s ease, transform 0.18s ease, display 0.18s allow-discrete;
+  }
+  .toast.hidden { opacity: 0; transform: translateY(8px); }
+  @starting-style {
+    .toast:not(.hidden) { opacity: 0; transform: translateY(8px); }
   }
   .toast-message { margin: 0; font-size: 0.9rem; }
   .toast-actions { display: flex; flex-wrap: wrap; gap: 6px 20px; }
@@ -744,6 +792,13 @@
     }
     .edit-row input[type="text"]:first-of-type { flex: 1 1 calc(100% - 30px); }
     .edit-row input[type="text"]:last-of-type { flex: 1 1 100%; margin-left: 30px; }
+  }
+  /* Wie beweging liever niet heeft, krijgt dezelfde kleuren zonder de verschuiving. */
+  @media (prefers-reduced-motion: reduce) {
+    .toast { transition: none; transform: none; }
+    .toast.hidden { transform: none; }
+    .btn-know:not(:disabled):active,
+    .btn-dontknow:not(:disabled):active { transform: none; }
   }
 </style>
 </head>
