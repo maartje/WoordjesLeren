@@ -2,12 +2,12 @@
 
 Technische beschrijving van de planning achter "Slim oefenen". Alles staat in
 `index.html`, sectie `// ---------- Slim oefenen: spaced repetition ----------`
-(regel 2433–2592).
+(regel 2446–2605).
 
 ## 1. De staat per woord
 
 Per *item* én per *richting* (`fwd` / `rev`) wordt één object bijgehouden
-(`index.html:1154-1158`):
+(`index.html:1167-1171`):
 
 | veld | betekenis |
 |---|---|
@@ -20,14 +20,14 @@ Daarnaast één teller per richting: `roundNumber = { fwd, rev }`. Dat is de klo
 hele systeem — **er wordt nergens met wall-clock tijd gerekend**, alleen met rondes. De
 enige timestamp in de opslag is `lastRound.at`, puur cosmetisch voor de resume-banner.
 
-De teller loopt op in `showEndScreen()` (`index.html:2322`), dus aan het *eind* van elke
+De teller loopt op in `showEndScreen()` (`index.html:2335`), dus aan het *eind* van elke
 afgeronde ronde. Een afgebroken ronde (via het logo terug naar start) telt niet mee.
 
 Opslag: `localStorage`, key `woordjesleren:progress:v1`, `wordStats` geserialiseerd als
-`[itemKey, fwd|null, rev|null]` met `itemKey = "lang|word|nl"` (`index.html:1188`). `x`
-wordt alleen weggeschreven als het `true` is (`withExcluded`, 1194).
+`[itemKey, fwd|null, rev|null]` met `itemKey = "lang|word|nl"` (`index.html:1201`). `x`
+wordt alleen weggeschreven als het `true` is (`withExcluded`, 1207).
 
-Er is geen migratiecode: `loadStoredState()` (1224) eist precies de velden die
+Er is geen migratiecode: `loadStoredState()` (1237) eist precies de velden die
 `persistState()` wegschrijft, en geeft anders `null` terug — dan begint de app schoon.
 Daardoor mag elke lezer ervan uitgaan dat `roundNumber`, `lastRound` en `fileNames`
 compleet zijn.
@@ -49,7 +49,7 @@ nog nooit beantwoord is. Zodra je er één keer goed op antwoordt is het interva
 `g = 5` is de eerste stand met het maximale interval, en daarmee de grens die de selectie
 gebruikt om "goed gekend" van "nog in opbouw" te scheiden (`SMART_KNOWN_GOED`, §5).
 
-## 3. De overgang na een antwoord — `nextState` (2462)
+## 3. De overgang na een antwoord — `nextState` (2475)
 
 ```js
 if (correct) {
@@ -88,7 +88,7 @@ wankel woord voor de focus-rem (`g = 1`, §5).
 `f` komt daar bovenop: dat is wat de prioriteit in de foutenpool bepaalt (§5), terwijl `g`
 bepaalt hoe lang het duurt voordat het woord weer met rust gelaten wordt.
 
-De boeking loopt via `recordStat()` (2139), die `roundNumberFor()` gebruikt — het nummer van
+De boeking loopt via `recordStat()` (2152), die `roundNumberFor()` gebruikt — het nummer van
 de ronde die *nu bezig is*, vóór de ophoging. Dit gebeurt bij **elke** oefenvorm, niet alleen
 bij Slim oefenen: ook een ronde "Alle woorden" of "Alle foute woorden" schrijft `g/f/s` bij
 en hoogt aan het eind de rondeteller op.
@@ -97,7 +97,7 @@ De toaster-knop "Toch fout" roept `recordStat(item, false, toastPreState)` aan m
 van *vóór* het goede antwoord, zodat de correctie niet als "eerst goed, daarna fout" wordt
 geboekt.
 
-## 4. Het gewicht — `weightFor` (2458)
+## 4. Het gewicht — `weightFor` (2471)
 
 ```js
 return state.f > 0 ? 1 : 1 / intervalFor(state.g);
@@ -113,9 +113,9 @@ rondegrootte is geen vast getal maar leest zichzelf af uit de planning. 50 woord
 allemaal op interval 10 staan → `load = 5` → rondes van 5 woorden. Een deck vol verse
 woorden → veel hoge gewichten → grotere rondes, tot het plafond.
 
-## 5. De selectie — `selectSmartItems` (2495)
+## 5. De selectie — `selectSmartItems` (2508)
 
-Eerst wordt in `buildSmartPlaylist` (2561) alles met `x` eruit gefilterd — bewust dáár en
+Eerst wordt in `buildSmartPlaylist` (2574) alles met `x` eruit gefilterd — bewust dáár en
 niet in `selectSmartItems`, zodat uitgezette woorden ook niet meetellen voor het minimum
 van 5.
 
@@ -129,7 +129,7 @@ De overgebleven woorden worden in vier pools verdeeld:
 | `later` | `f === 0 && g > 0 && s > round` | `s` oplopend (eerstvolgende eerst) |
 
 `wrong`, `unseen` en `known` (= `due` + `later`) dekken samen het hele deck, want elk
-beantwoord woord heeft `f > 0` of `g > 0`. `sortShuffled` (2480) schudt eerst en sorteert dan
+beantwoord woord heeft `f > 0` of `g > 0`. `sortShuffled` (2493) schudt eerst en sorteert dan
 stabiel op de sleutels in volgorde van belang, zodat woorden die op álle sleutels gelijk zijn
 in willekeurige volgorde staan.
 
@@ -169,7 +169,7 @@ gekende woorden, terwijl de woorden die nog in opbouw zijn achteraan blijven han
 die eerst de ruimte — dat is waar de vooruitgang zit, en dat is ook wat je in je statistieken
 terugziet.
 
-`SMART_KNOWN_GOED = 5` (2437) is geen willekeurig getal: `intervalFor(5) = 10`, het maximum
+`SMART_KNOWN_GOED = 5` (2450) is geen willekeurig getal: `intervalFor(5) = 10`, het maximum
 (§2). Vanaf `g = 5` staat een woord dus op het langste interval en is het "uitgeleerd" voor
 zover het schema dat kan zien.
 
@@ -253,7 +253,7 @@ const target = Math.max(minItems, Math.min(cap, Math.round(load)));
   anders zou een vers lesbestand van 200 woorden de ronde laten exploderen.
 - `known` telt mee met de gewichtensom over **alle** bekende woorden, ook die pas over 9
   rondes gepland staan.
-- `SMART_MIN_ITEMS = 5` is de bodem, `cap` het plafond (`getMaxRoundSize()`, 1861): een
+- `SMART_MIN_ITEMS = 5` is de bodem, `cap` het plafond (`getMaxRoundSize()`, 1874): een
   getal, `Infinity` bij "Alle woorden", of gelijk aan `maxWrongNew` bij de stand
   "= Max. foute/nieuwe".
 
@@ -277,9 +277,9 @@ slotafkapping op `cap` is nodig omdat het quotum zelf al groter dan `cap` kan zi
 ### Volgorde binnen de ronde
 
 De sortering in `selectSmartItems` bepaalt alleen *wat* gekozen wordt; de volgorde waarin je
-het te zien krijgt staat daar los van. `buildSmartPlaylist` gooit er `ordered()` (1888)
+het te zien krijgt staat daar los van. `buildSmartPlaylist` gooit er `ordered()` (1901)
 overheen, en dat doet élke oefenvorm: willekeurig geschud, behalve als je "Originele volgorde"
-hebt gekozen — dan zet `inDeckOrder()` (1873) de selectie terug in deckvolgorde, die de
+hebt gekozen — dan zet `inDeckOrder()` (1886) de selectie terug in deckvolgorde, die de
 lesbestanden in de volgorde van toevoegen achter elkaar plakt. De recency- en
 fout-tellersortering zie je tijdens het oefenen dus nergens terug.
 
@@ -332,17 +332,17 @@ meer nieuwe woorden binnen het quotum.
 
 | Onderdeel | Regels in `index.html` |
 |---|---|
-| `SMART_MIN_ITEMS` / `SMART_MAX_INTERVAL` / `SMART_KNOWN_GOED` | 2434 / 2435 / 2437 |
-| `SMART_FOCUS_WRONG` / `SMART_FRESH_GOED` | 2440 / 2441 |
-| `fibonacci` / `intervalFor` / `weightFor` | 2443 / 2452 / 2458 |
-| `nextState` | 2462 |
-| `sortShuffled` | 2480 |
-| `selectSmartItems` | 2495–2557 |
-| `buildSmartPlaylist` / `startSmartRound` | 2561 / 2574 |
-| Per-woord staat + `roundNumber` | 1154–1158 |
-| `stateFor` / `recordStat` | 2125 / 2139 |
-| Rondeteller ophogen (`showEndScreen`) | 2322 |
-| `ordered` / `inDeckOrder` / `wrongItems` | 1888 / 1873 / 1898 |
-| `getMaxWrongNew` / `getMaxRoundSize` | 1853 / 1861 |
-| `PRACTICE_OPTIONS` | 2685 |
-| `persistState` / `loadStoredState` / storage key | 1241 / 1224 / 1170 |
+| `SMART_MIN_ITEMS` / `SMART_MAX_INTERVAL` / `SMART_KNOWN_GOED` | 2447 / 2448 / 2450 |
+| `SMART_FOCUS_WRONG` / `SMART_FRESH_GOED` | 2453 / 2454 |
+| `fibonacci` / `intervalFor` / `weightFor` | 2456 / 2465 / 2471 |
+| `nextState` | 2475 |
+| `sortShuffled` | 2493 |
+| `selectSmartItems` | 2508–2570 |
+| `buildSmartPlaylist` / `startSmartRound` | 2574 / 2587 |
+| Per-woord staat + `roundNumber` | 1167–1171 |
+| `stateFor` / `recordStat` | 2138 / 2152 |
+| Rondeteller ophogen (`showEndScreen`) | 2335 |
+| `ordered` / `inDeckOrder` / `wrongItems` | 1901 / 1886 / 1911 |
+| `getMaxWrongNew` / `getMaxRoundSize` | 1866 / 1874 |
+| `PRACTICE_OPTIONS` | 2698 |
+| `persistState` / `loadStoredState` / storage key | 1254 / 1237 / 1183 |

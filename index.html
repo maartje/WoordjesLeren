@@ -711,6 +711,13 @@
   .foldout + .foldout {
     margin-top: 10px;
   }
+  /* Een inleidende alinea in een uitklapper: zelfde typografie als de lijst eronder, zonder
+     eigen marge — .foldout-body zet de ruimte tussen de blokken zelf al. */
+  .foldout-body p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
   .tips-list {
     margin: 0;
     padding-left: 18px;
@@ -721,7 +728,8 @@
   .tips-list li + li {
     margin-top: 10px;
   }
-  /* "In de app:" scheidt het principe van de toepassing hier, zonder extra kopjes. */
+  /* De grijze helft van een opsommingsregel, zonder extra kopjes: "In de app:" bij de tips,
+     "Waarom:" bij Slim oefenen. */
   .tip-app {
     color: var(--muted);
   }
@@ -927,7 +935,12 @@
       <details class="foldout" id="strategy-smart">
         <summary class="foldout-title">Slim oefenen: focus en gespreide herhaling</summary>
         <div class="foldout-body">
-          <!-- Tekst volgt nog. -->
+          <p>Bij &ldquo;Slim oefenen&rdquo; stelt de app elke ronde zelf een lijst samen. Per woord wordt bijgehouden hoe vaak je het goed en fout had. Op grond daarvan krijg je vooral de woorden te zien die je nog niet zo goed kent, aangevuld met woorden die je misschien dreigt te vergeten.</p>
+          <ul class="tips-list">
+            <li><strong>Een beperkt aantal onbekende woorden per ronde</strong> &mdash; Per ronde komen er hooguit vijf woorden bij die je nog niet kent. De rest van de ronde bestaat uit woorden die je al eens goed had. Beide aantallen kun je aanpassen bij Instellingen. <span class="tip-app">Waarom: je kunt maar een beperkt aantal nieuwe woorden tegelijk onthouden. Een lange lijst in &eacute;&eacute;n keer doornemen kost veel tijd en levert weinig blijvend resultaat op.</span></li>
+            <li><strong>Nieuwe woorden komen er pas bij als bijna alle woorden in de huidige set goed gaan</strong> &mdash; Binnen dat maximum van vijf krijgen de foute woorden uit de huidige set voorrang: zolang er nog veel fout staan, komen er geen nieuwe bij. <span class="tip-app">Waarom: eerst de woorden waar je mee bezig bent onder de knie krijgen, dan pas uitbreiden.</span></li>
+            <li><strong>Hoe vaker je een woord goed hebt, hoe langer het wegblijft</strong> &mdash; Na het eerste goede antwoord komt een woord na 2 rondes terug, daarna na 3, 5, 8 en ten slotte steeds na 10 rondes. <span class="tip-app">Waarom: je onthoudt een woord het best als je het ophaalt net voordat je het zou vergeten. Woorden die je allang kent nogmaals oefenen levert weinig op; die tijd besteed je beter aan de minder bekende woorden.</span></li>
+          </ul>
         </div>
       </details>
       <details class="foldout" id="tips">
