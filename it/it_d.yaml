@@ -1,0 +1,39 @@
+lesson: 4
+words:
+  - it: lunedì
+    nl: maandag, ma
+  - it: martedì
+    nl: dinsdag, di
+  - it: mercoledì
+    nl: woensdag, wo
+  - it: giovedì
+    nl: donderdag, do
+  - it: venerdì
+    nl: vrijdag, vr
+  - it: sabato
+    nl: zaterdag, za
+  - it: domenica
+    nl: zondag, zo
+  - it: i compiti
+    nl: het huiswerk
+  - it: il ragazzo
+    nl: de jongen
+  - it: la ragazza
+    nl: het meisje
+  - it: la pagina
+    nl: de bladzijde
+  - it: la parola
+    nl: het woord
+  - it: oggi
+    nl: vandaag
+  - it: impara
+    nl: leer
+  - it: fai
+    nl: doe, maak
+  - it: lavora
+    nl: werk
+  - it: completa
+    nl: vul in, vul aan
+sentences:
+  - it: Abbiamo compiti?
+    nl: Hebben we huiswerk?

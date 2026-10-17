@@ -344,13 +344,17 @@
   .btn-dontknow:not(:disabled):hover { background: var(--bad-bg-hover); border-color: var(--bad); }
   .btn-know:not(:disabled):active,
   .btn-dontknow:not(:disabled):active { transform: translateY(1px); }
-  /* In de rol van 'Volgende' ziet deze knop eruit als 'Volgende': geen kruisje, geen rood. */
+  /* In de rol van 'Volgende' ziet de knop eruit als 'Volgende': geen teken, geen kleur van
+     de afloop. */
+  .btn-know.as-next,
   .btn-dontknow.as-next {
     background: var(--text);
     color: #fff;
     border-color: var(--text);
   }
+  .btn-know.as-next::before,
   .btn-dontknow.as-next::before { content: none; }
+  .btn-know.as-next:not(:disabled):hover,
   .btn-dontknow.as-next:not(:disabled):hover { background: #2b3246; border-color: #2b3246; }
   .btn-next { background: var(--text); color: #fff; width: 100%; }
   /* De plek voor 'Volgende' is er altijd, ook als die knop er niet staat: zo verandert de kaart
@@ -495,15 +499,12 @@
     text-align: center;
     line-height: 1.2;
   }
-  .mistakes-header {
+  /* De knop staat alleen; de groepskoppen eronder zijn de koppen van de lijst. */
+  .round-groups-header {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin: 18px 0 8px;
-  }
-  .mistakes-title {
-    font-weight: 700;
+    justify-content: flex-end;
+    margin: 18px 0 4px;
+    min-height: 26px;
   }
   .btn-toggle-answers {
     flex: 0 0 auto;
@@ -514,7 +515,25 @@
     text-decoration: underline;
   }
   .btn-toggle-answers:hover { background: none; filter: none; color: var(--accent-dark); }
-  .mistake-row {
+  /* Eén uitklapbare groep per uitkomst (fout, verbeterd/nieuw, herhaald). Hetzelfde
+     driehoekje als de foldouts op het startscherm, maar zonder kader: deze groepen staan
+     al op een kaart. */
+  .round-group-title {
+    display: flex;
+    /* Niet center: een kop die over twee regels loopt zou het driehoekje halverwege
+       zetten in plaats van naast de eerste regel. */
+    align-items: baseline;
+    gap: 6px;
+    cursor: pointer;
+    list-style: none; /* zonder dit zet Firefox er zijn eigen driehoekje naast */
+    font-weight: 700;
+    padding: 6px 0;
+  }
+  .round-group-title::-webkit-details-marker { display: none; }
+  .round-group[open] > .round-group-title { margin-bottom: 4px; }
+  /* De laatste rij van een groep heeft geen streep; dit houdt de volgende kop los. */
+  #round-groups > * + * { margin-top: 8px; }
+  .result-row {
     display: flex;
     align-items: baseline;
     justify-content: space-between;
@@ -522,11 +541,22 @@
     border-bottom: 1px solid var(--border);
     gap: 16px;
   }
-  .mistake-row:last-child { border-bottom: none; }
-  .mistake-prompt-wrap { display: flex; align-items: baseline; gap: 8px; }
-  .mistake-cross { color: var(--bad); font-weight: 700; }
-  .mistake-prompt { color: var(--text); }
-  .mistake-answer { color: var(--muted); text-align: right; }
+  .result-row:last-child { border-bottom: none; }
+  /* Gewone tekstloop in plaats van flex: zo loopt een lang woord netjes door onder het
+     teken en sluit het labeltje aan op de laatste regel. In de HTML staat er geen spatie
+     tussen teken en woord, dus daar kan de regel niet afbreken. */
+  .result-prompt-wrap { min-width: 0; }
+  .result-mark { font-weight: 700; margin-right: 8px; }
+  .result-mark.bad { color: var(--bad); }
+  .result-mark.good { color: var(--good); }
+  .result-mark.muted { color: var(--muted); }
+  .result-prompt { color: var(--text); }
+  /* Wat de titel van de groep niet al zegt: 'nieuw', 'was fout' of 'was goed'. */
+  .result-tag { color: var(--muted); font-size: 0.75rem; white-space: nowrap; }
+  .result-answer { color: var(--muted); text-align: right; }
+  /* De antwoorden staan altijd in de HTML en worden hier verborgen: opnieuw renderen zou de
+     open/dicht-stand van de groepen wissen. */
+  #round-groups:not(.answers-shown) .result-answer { display: none; }
   .no-mistakes {
     text-align: center;
     color: var(--good);
@@ -627,6 +657,7 @@
   }
   /* Driehoekje dat meedraait als de sectie opengaat. */
   .foldout-title::before,
+  .round-group-title::before,
   .section-toggle::before {
     content: "";
     flex: 0 0 auto;
@@ -638,6 +669,7 @@
     transition: transform 0.15s ease;
   }
   .foldout[open] .foldout-title::before,
+  .round-group[open] > .round-group-title::before,
   .section-fold[open] > .section-toggle::before {
     transform: rotate(90deg);
   }
@@ -871,8 +903,8 @@
         <!-- Deze twee sturen alleen de selectie van "Slim oefenen"; de instellingen erboven
              gelden voor elke ronde. -->
         <div class="settings-subtitle">Slim oefenen</div>
-        <label class="setting-label" for="sel-max-wrong-skipped">Max. foute/nieuwe woorden<span class="hint-icon" tabindex="0" title="Maximaal aantal onbekende woorden waarop de focus ligt. Mensen kunnen typisch niet meer dan 5 tot 10 nieuwe woorden in een keer leren.">?</span></label>
-        <select class="setting-select" id="sel-max-wrong-skipped">
+        <label class="setting-label" for="sel-max-wrong-new">Max. foute/nieuwe woorden<span class="hint-icon" tabindex="0" title="Maximaal aantal onbekende woorden waarop de focus ligt. Mensen kunnen typisch niet meer dan 5 tot 10 nieuwe woorden in een keer leren.">?</span></label>
+        <select class="setting-select" id="sel-max-wrong-new">
           <option value="5" selected>5</option>
           <option value="7">7</option>
           <option value="9">9</option>
@@ -961,11 +993,11 @@
     <div class="score-line" id="final-score"></div>
     <div class="score-sub" id="final-score-sub"></div>
     <div class="histogram" id="stats-histogram"></div>
-    <div class="mistakes-header">
-      <div class="mistakes-title" id="mistakes-title"></div>
+    <!-- De koppen van de groepen dienen als kop boven de lijst; hier staat alleen de knop. -->
+    <div class="round-groups-header">
       <button class="btn-toggle-answers hidden" id="btn-toggle-answers">Toon antwoorden</button>
     </div>
-    <div id="mistakes-list"></div>
+    <div id="round-groups"></div>
     <div class="warning hidden" id="empty-round"></div>
     <div class="end-actions">
       <!-- Menu-inhoud komt uit PRACTICE_OPTIONS: beide schermen bieden dezelfde opties. -->
@@ -1068,8 +1100,7 @@
 
   const finalScoreEl = document.getElementById("final-score");
   const finalScoreSubEl = document.getElementById("final-score-sub");
-  const mistakesTitle = document.getElementById("mistakes-title");
-  const mistakesList = document.getElementById("mistakes-list");
+  const roundGroupsEl = document.getElementById("round-groups");
   const histogramEl = document.getElementById("stats-histogram");
   const emptyRoundEl = document.getElementById("empty-round");
   const btnToggleAnswers = document.getElementById("btn-toggle-answers");
@@ -1078,7 +1109,7 @@
   const selSoundMode = document.getElementById("sel-sound-mode");
   const selOrderMode = document.getElementById("sel-order-mode");
   const selMaxRound = document.getElementById("sel-max-round");
-  const selMaxWrongSkipped = document.getElementById("sel-max-wrong-skipped");
+  const selMaxWrongNew = document.getElementById("sel-max-wrong-new");
   const startActions = document.getElementById("start-actions");
   const resumeInfo = document.getElementById("resume-info");
   const btnNewFile = document.getElementById("btn-new-file");
@@ -1106,13 +1137,17 @@
   let score = 0;
   let mistakes = [];
   let answeredItems = []; // alles wat deze ronde beantwoord is, goed of fout - voor de histogram
+  let goodItems = []; // de woorden die deze ronde goed gingen
+  // Hoe het woord ervoor stond vóór het antwoord, voor élk beantwoord woord. Alleen op het
+  // antwoordmoment te zien, want recordStat overschrijft die staat meteen.
+  let preKind = new Map(); // item -> "nieuw" (nog nooit beantwoord) | "fout" | "goed"
   let answered = false;
   let answersRevealed = false;
   let preAnswerState = null; // staat van vóór het huidige antwoord, voor 'Toch fout'
   let toastItem = null; // het woord waar de melding over gaat; dat is er al eentje terug
   let toastPreState = null; // staat van vóór dat antwoord, voor 'Toch fout'
   let toastTimer = 0;
-  let dontKnowIsNext = false; // na 'Weet ik niet' is die knop de 'Volgende'-knop geworden
+  let nextChoice = null; // de keuzeknop die na een antwoord de rol van 'Volgende' heeft
   let direction = "fwd";
   let soundMode = "foreign";
   let advanceGen = 0;        // elke sprong maakt een nog lopende automatische sprong ongeldig
@@ -1133,7 +1168,9 @@
 
   // ---------- Voortgang opslaan (localStorage) ----------
   const STORAGE_KEY = "woordjesleren:progress:v1";
-  let storedMeta = {}; // { fileNames, lastRound } - aangevuld via persistState()
+  // Altijd compleet, ook zonder opslag: zo hoeft geen enkele lezer op een ontbrekend veld
+  // te controleren. loadPendingDeck() vervangt hem door de opgeslagen versie.
+  let storedMeta = { fileNames: [], lastRound: { fwd: null, rev: null } };
   // De oefenvorm die de gebruiker zelf uit het menu koos; null = nog geen keuze. Gaat mee in
   // persistState(), zodat hij een herlaad overleeft. Geldt voor beide richtingen samen.
   let preferredPractice = null;
@@ -1152,49 +1189,24 @@
     return `${item.lang}|${item.word}|${item.nl}`;
   }
 
-  function tagLegacyItemsWithSingleFile(items, fileNames) {
-    if (!fileNames || fileNames.length !== 1) return;
-    const onlyName = fileNames[0];
-    for (const item of items) {
-      if (!item.file) item.file = onlyName;
-    }
-  }
-
-  function normalizeLastRound(raw) {
-    if (raw && typeof raw === "object" && ("fwd" in raw || "rev" in raw)) {
-      return { fwd: raw.fwd || null, rev: raw.rev || null };
-    }
-    return { fwd: null, rev: null };
-  }
-
-  function normalizeRoundNumber(raw) {
-    if (raw && typeof raw === "object") return { fwd: raw.fwd || 0, rev: raw.rev || 0 };
-    return { fwd: 0, rev: 0 };
-  }
-
   // x alleen opnemen als het woord echt uitgesloten is: scheelt ruimte in de opslag en
   // houdt de staat van gewone woorden ongewijzigd.
   function withExcluded(state, excluded) {
     return excluded ? { ...state, x: true } : state;
   }
 
-  function isSmartState(value) {
-    return Boolean(value) && typeof value === "object"
-      && typeof value.g === "number" && typeof value.f === "number" && typeof value.s === "number";
-  }
-
+  // De opgeslagen staten weer aan de items van het deck koppelen. Woorden die intussen uit
+  // het deck zijn gehaald vallen vanzelf af.
   function rebuildWordStats(items, entries) {
     const lookup = new Map();
     for (const item of items) lookup.set(itemKey(item), item);
     const map = new Map();
-    for (const entry of entries || []) {
-      const [key, fwd, rev] = entry || [];
+    for (const [key, fwd, rev] of entries) {
       const item = lookup.get(key);
-      // Oude formaten (losse streaks) kennen geen planning - statistieken resetten.
-      if (!item || (!isSmartState(fwd) && !isSmartState(rev))) continue;
+      if (!item) continue;
       const value = {};
-      if (isSmartState(fwd)) value.fwd = withExcluded({ g: fwd.g, f: fwd.f, s: fwd.s }, fwd.x);
-      if (isSmartState(rev)) value.rev = withExcluded({ g: rev.g, f: rev.f, s: rev.s }, rev.x);
+      if (fwd) value.fwd = fwd;
+      if (rev) value.rev = rev;
       map.set(item, value);
     }
     return map;
@@ -1205,8 +1217,8 @@
       delete entry[direction];
       if (!entry.fwd && !entry.rev) wordStats.delete(item);
     }
-    roundNumber = { ...normalizeRoundNumber(roundNumber), [direction]: 0 };
-    storedMeta.lastRound = { ...normalizeLastRound(storedMeta.lastRound), [direction]: null };
+    roundNumber = { ...roundNumber, [direction]: 0 };
+    storedMeta.lastRound = { ...storedMeta.lastRound, [direction]: null };
   }
 
   function loadStoredState() {
@@ -1214,7 +1226,12 @@
       const raw = localStorage.getItem(STORAGE_KEY);
       if (!raw) return null;
       const data = JSON.parse(raw);
-      if (!data || !Array.isArray(data.words) || !Array.isArray(data.sentences)) return null;
+      // Alles wat persistState() wegschrijft moet er zijn. Ontbreekt er iets, dan is de
+      // opslag onbruikbaar en beginnen we schoon, in plaats van elke lezer te laten
+      // controleren of zijn veld er wel is.
+      if (!data || !Array.isArray(data.words) || !Array.isArray(data.sentences)
+        || !Array.isArray(data.wordStats) || !Array.isArray(data.fileNames)
+        || !data.roundNumber || !data.lastRound) return null;
       return data;
     } catch (err) {
       return null;
@@ -1225,15 +1242,15 @@
     try {
       Object.assign(storedMeta, patch);
       const data = {
-        fileNames: storedMeta.fileNames || [],
-        lastRound: normalizeLastRound(storedMeta.lastRound),
+        fileNames: storedMeta.fileNames,
+        lastRound: storedMeta.lastRound,
         direction: direction,
         soundMode: getSoundMode(),
         orderMode: getOrderMode(),
         maxRound: getMaxRoundValue(),
-        maxWrongSkipped: getMaxWrongSkipped(),
+        maxWrongNew: getMaxWrongNew(),
         preferredPractice: preferredPractice || null,
-        roundNumber: normalizeRoundNumber(roundNumber),
+        roundNumber: roundNumber,
         words: combinedWords,
         sentences: combinedSentences,
         wordStats: Array.from(wordStats.entries()).map(([item, v]) => [itemKey(item), v.fwd || null, v.rev || null]),
@@ -1275,10 +1292,8 @@
     if (stored && stored.maxRound) {
       setSelect(selMaxRound, stored.maxRound);
     }
-    // maxNewWrong is de oude sleutel: meelezen zodat een ingestelde waarde niet verdwijnt.
-    const storedWrongSkipped = stored && (stored.maxWrongSkipped || stored.maxNewWrong);
-    if (storedWrongSkipped) {
-      setSelect(selMaxWrongSkipped, storedWrongSkipped);
+    if (stored && stored.maxWrongNew) {
+      setSelect(selMaxWrongNew, stored.maxWrongNew);
     }
     preferredPractice = (stored && stored.preferredPractice) || null;
     if (!stored || !hasDeck()) {
@@ -1289,7 +1304,7 @@
     // De score hoort bij de voortgang in deze richting: die van een deck dat je daarna
     // hebt weggehaald, zegt niets over de woorden die er nu staan.
     const hasProgress = hasProgressFor(getDirection());
-    const lastRound = hasProgress ? normalizeLastRound(stored.lastRound)[getDirection()] : null;
+    const lastRound = hasProgress ? stored.lastRound[getDirection()] : null;
     const roundText = lastRound
       ? `${lastRound.score}/${lastRound.total} goed, ${formatRelativeTime(lastRound.at)}`
       : "nog niet geoefend";
@@ -1380,7 +1395,7 @@
   let combinedSentences = [];
 
   function renderFileList() {
-    const names = storedMeta.fileNames || [];
+    const names = storedMeta.fileNames;
     fileLabelEl.textContent = names.length ? "Voeg lesbestand(en) toe" : "Kies lesbestand(en)";
     fileListEl.innerHTML = names
       .map((name) => `<div class="loaded-file-row" data-file="${escapeHtml(name)}">
@@ -1401,7 +1416,7 @@
     };
     combinedWords = combinedWords.filter(keep);
     combinedSentences = combinedSentences.filter(keep);
-    storedMeta.fileNames = (storedMeta.fileNames || []).filter((n) => n !== fileName);
+    storedMeta.fileNames = storedMeta.fileNames.filter((n) => n !== fileName);
     renderFileList();
     persistState({ fileNames: storedMeta.fileNames });
     refreshResumeBanner();
@@ -1420,7 +1435,7 @@
 
     const warnings = [];
     const addedNames = [];
-    const existingNames = new Set(storedMeta.fileNames || []);
+    const existingNames = new Set(storedMeta.fileNames);
 
     for (const file of files) {
       if (existingNames.has(file.name)) {
@@ -1456,7 +1471,7 @@
 
     if (addedNames.length) {
       fileChangedSinceRound = true;
-      const fileNames = (storedMeta.fileNames || []).concat(addedNames);
+      const fileNames = storedMeta.fileNames.concat(addedNames);
       persistState({ fileNames });
       renderFileList();
       refreshResumeBanner();
@@ -1718,7 +1733,7 @@
     const name = normalizeFileName(editNameInput.value);
     if (!name) return "Geef het lesbestand een naam.";
     if (/[\\/]/.test(name)) return "Een bestandsnaam kan geen / of \\ bevatten.";
-    if ((storedMeta.fileNames || []).includes(name)) {
+    if (storedMeta.fileNames.includes(name)) {
       return `"${name}" is al geladen. Kies een andere naam.`;
     }
     editDraft.fileName = name;
@@ -1806,7 +1821,7 @@
     }
 
     if (editDraft.isNew) {
-      storedMeta.fileNames = (storedMeta.fileNames || []).concat(editDraft.fileName);
+      storedMeta.fileNames = storedMeta.fileNames.concat(editDraft.fileName);
     }
     combinedWords = applyEditDraft(combinedWords, editDraft.words);
     combinedSentences = applyEditDraft(combinedSentences, editDraft.sentences);
@@ -1833,11 +1848,10 @@
     return selMaxRound.value;
   }
 
-  // Plafond voor alles wat je nog niet kent samen: foute en nieuwe woorden, plus woorden die
-  // in oude voortgang nog als overgeslagen staan. Heet in de instellingen
-  // "Max. foute/nieuwe woorden".
-  function getMaxWrongSkipped() {
-    return Number(selMaxWrongSkipped.value);
+  // Plafond voor alles wat je nog niet kent samen: foute en nieuwe woorden. Heet in de
+  // instellingen "Max. foute/nieuwe woorden".
+  function getMaxWrongNew() {
+    return Number(selMaxWrongNew.value);
   }
 
   // "all" betekent: geen plafond. Infinity werkt gewoon in Math.min en Array#slice.
@@ -1847,7 +1861,7 @@
   function getMaxRoundSize() {
     const value = getMaxRoundValue();
     if (value === "all") return Infinity;
-    if (value === "same") return getMaxWrongSkipped();
+    if (value === "same") return getMaxWrongNew();
     return Number(value);
   }
 
@@ -1879,12 +1893,10 @@
     return combinedWords.concat(combinedSentences);
   }
 
-  // Alle woorden die nog fout staan, niet alleen de fouten van deze ronde; hoogste fout-teller eerst.
+  // Alle woorden die nog fout staan, niet alleen de fouten van deze ronde. In deckvolgorde:
+  // ordered() zet ze daarna in de volgorde die de gebruiker heeft ingesteld.
   function wrongItems(dir = direction) {
-    const entries = deckItems()
-      .map((item) => ({ item, state: stateFor(item, dir) }))
-      .filter((entry) => entry.state.f > 0);
-    return sortShuffled(entries, (entry) => -entry.state.f).map((entry) => entry.item);
+    return deckItems().filter((item) => stateFor(item, dir).f > 0);
   }
 
   // Nieuw = nog nooit getoond in deze richting, precies de 'unseen' van selectSmartItems.
@@ -1895,17 +1907,10 @@
   // De fouten van de laatste afgeronde ronde. Die staan als sleutels in lastRound, dus ze
   // overleven een herlaad; woorden die daarna uit het deck zijn gehaald vallen vanzelf af.
   function lastRoundWrongItems(dir = direction) {
-    const entry = normalizeLastRound(storedMeta.lastRound)[dir];
+    const entry = storedMeta.lastRound[dir];
     const keys = new Set((entry && entry.wrong) || []);
     if (keys.size === 0) return [];
     return deckItems().filter((item) => keys.has(itemKey(item)));
-  }
-
-  // Niet via ordered(): wrongItems() staat al op fout-teller gesorteerd, en die volgorde
-  // (het vaakst fout eerst) is hier zinvoller dan opnieuw schudden.
-  function startMistakesQuiz() {
-    const items = wrongItems();
-    beginSession(getOrderMode() === "original" ? inDeckOrder(items) : items);
   }
 
   function getDirection() {
@@ -1950,6 +1955,8 @@
     score = 0;
     mistakes = [];
     answeredItems = [];
+    goodItems = [];
+    preKind = new Map();
     direction = directionOverride || getDirection();
     soundMode = getSoundMode();
     cancelAutoAdvance();
@@ -1984,10 +1991,11 @@
     feedbackEl.textContent = "";
     preAnswerState = null;
     btnNext.classList.add("hidden");
-    dontKnowIsNext = false;
-    btnKnow.classList.remove("hidden");
-    btnDontKnow.classList.remove("as-next");
-    btnDontKnow.textContent = "Weet ik niet";
+    nextChoice = null;
+    for (const [button, label] of [[btnKnow, "Weet ik"], [btnDontKnow, "Weet ik niet"]]) {
+      button.classList.remove("hidden", "as-next");
+      button.textContent = label;
+    }
     // Het invoerveld is verborgen in 'Alleen voorlezen' en kan dan geen focus krijgen;
     // 'Weet ik' wel, zodat de toetsenbordflow Enter - Enter per woord blijft.
     if (isListenMode()) btnKnow.focus(); else answerInput.focus();
@@ -2143,16 +2151,22 @@
     persistState();
   }
 
-  function handleResult(correct) {
+  // viaCheck: het antwoord is ingetypt en door de controle goedgekeurd. Alleen dan springt hij
+  // vanzelf door (en in 'Alleen voorlezen'); na 'Weet ik' en 'Weet ik niet' wacht hij op jou.
+  function handleResult(correct, viaCheck) {
     if (answered) return;
     hideToast(); // de melding gaat over het vorige woord; dat is nu voorbij
     const item = currentItem();
     const answerText = answerWord(item);
+    // Vóór recordStat: daarna bestaat de entry altijd en is "nog nooit beantwoord" weg.
+    const seen = hasStateFor(item);
     preAnswerState = stateFor(item);
     recordStat(item, correct);
     answeredItems.push(item);
+    preKind.set(item, !seen ? "nieuw" : (preAnswerState.f > 0 ? "fout" : "goed"));
 
     if (correct) {
+      goodItems.push(item);
       score += 1;
       feedbackEl.className = "feedback good";
       feedbackEl.innerHTML = `<span class="feedback-mark">&#10003;</span><b>${escapeHtml(answerText)}</b>`;
@@ -2163,33 +2177,35 @@
     }
 
     scoreText.textContent = `Score: ${score}`;
-    markAnswered(correct);
+    const autoAdvance = isListenMode() || viaCheck;
+    markAnswered(autoAdvance);
 
     // Elk goed woord kun je nog bijsturen: je gokte misschien goed, of je kent het allang.
     // In 'Alleen voorlezen' niet, want daar antwoord je zelf niets.
     if (correct && !isListenMode()) showKnowToast(item);
 
-    // Na een goed antwoord valt er niets meer te doen: het antwoord wordt eventueel uitgesproken
-    // en daarna springt hij vanzelf door, net als in 'Alleen voorlezen'. Alleen na een fout blijft
-    // het scherm staan, want dan wil je het juiste antwoord rustig kunnen lezen.
-    if (isListenMode() || correct) {
+    // Een ingetypt goed antwoord heeft geen nabespreking nodig: uitspreken en doorspringen,
+    // net als in 'Alleen voorlezen'. Bij 'Weet ik' en 'Weet ik niet' blijft het scherm staan,
+    // want dan wil je het juiste antwoord rustig kunnen lezen.
+    if (autoAdvance) {
       speakAnswerThenAdvance(answerText, answerLang(item));
     } else if (shouldSpeak(answerLang(item))) {
       speak(answerText, answerLang(item));
     }
   }
 
-  // Na 'Weet ik niet' staat je muis al op die knop: laat hem daar 'Volgende' worden, dan ga je
-  // met dezelfde beweging verder. 'Weet ik' valt weg, want er valt niets meer te weten.
-  function showDontKnowAsNext() {
+  // Je muis staat al op de knop waar je net op drukte: laat die daar 'Volgende' worden, dan ga
+  // je met dezelfde beweging verder. De andere uitweg valt weg, want er valt niets meer te
+  // kiezen.
+  function showChoiceAsNext(button, other) {
     if (isListenMode()) return; // daar blijft het scherm staan en springt hij vanzelf door
-    dontKnowIsNext = true;
-    btnKnow.classList.add("hidden");
+    nextChoice = button;
+    other.classList.add("hidden");
     btnNext.classList.add("hidden"); // anders staat 'Volgende' er twee keer
-    btnDontKnow.disabled = false;    // markAnswered() zette hem net uit
-    btnDontKnow.classList.add("as-next");
-    btnDontKnow.textContent = "Volgende \u2192";
-    btnDontKnow.focus();             // zo werkt Enter ook, net als bij de gewone knop
+    button.disabled = false;         // markAnswered() zette hem net uit
+    button.classList.add("as-next");
+    button.textContent = "Volgende \u2192";
+    button.focus();                  // zo werkt Enter ook, net als bij de gewone knop
   }
 
   // Een fout getypt antwoord is meestal een tikfout. Je krijgt het juiste antwoord dus niet te
@@ -2203,8 +2219,9 @@
   const TOAST_MS = 8000;      // lang genoeg om het volgende woord te lezen en terug te klikken
   const TOAST_DONE_MS = 2500; // na een keuze alleen nog de bevestiging
 
-  // Na 'Weet ik' springt het scherm door; deze melding houdt het woord nog even vast, zodat je
-  // het alsnog fout kunt rekenen of kunt uitzetten.
+  // Na 'Weet ik' kun je je oordeel nog bijstellen: deze melding houdt het woord vast zolang je
+  // op dit scherm blijft en loopt door op het volgende woord, zodat je het alsnog fout kunt
+  // rekenen of kunt uitzetten.
   function showKnowToast(item) {
     toastItem = item;
     toastPreState = preAnswerState;
@@ -2238,20 +2255,22 @@
     if (answered) return;
     const item = currentItem();
     if (isCorrectAnswer(answerInput.value, answerWord(item))) {
-      handleResult(true);
+      handleResult(true, true);
       return;
     }
     showRetry();
   });
 
   btnKnow.addEventListener("click", () => {
-    handleResult(true);
+    if (nextChoice === btnKnow) return goToNextItem();
+    handleResult(true, false);
+    showChoiceAsNext(btnKnow, btnDontKnow);
   });
 
   btnDontKnow.addEventListener("click", () => {
-    if (dontKnowIsNext) return goToNextItem();
-    handleResult(false);
-    showDontKnowAsNext();
+    if (nextChoice === btnDontKnow) return goToNextItem();
+    handleResult(false, false);
+    showChoiceAsNext(btnDontKnow, btnKnow);
   });
 
   answerInput.addEventListener("keydown", (e) => {
@@ -2275,6 +2294,8 @@
     // Opnieuw rekenen vanaf de staat van vóór 'Weet ik', niet 'eerst goed en dan fout'.
     recordStat(item, false, toastPreState);
     score -= 1;
+    // preKind blijft staan: de voorgeschiedenis van dit woord is niet veranderd.
+    goodItems = goodItems.filter((i) => i !== item);
     mistakes.push(item); // item staat al in answeredItems
     scoreText.textContent = `Score: ${score}`;
     toastMessage.innerHTML = `Woord is gemarkeerd als fout: <b>${escapeHtml(promptWord(item))}</b>`;
@@ -2303,7 +2324,7 @@
     showScreen(screenEnd);
     answersRevealed = false;
 
-    roundNumber = { ...normalizeRoundNumber(roundNumber), [direction]: roundNumberFor() + 1 };
+    roundNumber = { ...roundNumber, [direction]: roundNumberFor() + 1 };
 
     const answeredTotal = score + mistakes.length;
     finalScoreEl.textContent = `Ronde Score: ${score} / ${answeredTotal}`;
@@ -2312,9 +2333,8 @@
 
     // wrong bewaart de fouten van deze ronde als itemKey, zodat "Foute woorden deze ronde"
     // ook op het startscherm en na een herlaad nog weet om welke woorden het ging.
-    const prevLastRound = normalizeLastRound(storedMeta.lastRound);
     persistState({
-      lastRound: { ...prevLastRound, [direction]: {
+      lastRound: { ...storedMeta.lastRound, [direction]: {
         score, total: answeredTotal, at: Date.now(),
         wrong: Array.from(new Set(mistakes.map(itemKey))),
       } },
@@ -2324,7 +2344,7 @@
 
     emptyRoundEl.classList.add("hidden");
     renderHistogram(new Set(answeredItems));
-    renderMistakes();
+    renderRoundGroups();
   }
 
   // Elke balk heeft dezelfde opbouw: de lichte kleur is de hele groep, het donkere deel
@@ -2346,10 +2366,9 @@
   const HISTOGRAM_NOW_EXCLUDED = "var(--gold)";
   const HISTOGRAM_EXCLUDED_BUCKET = 7;
 
-  // Links, onder "Nieuw", alle woorden waar nog geen goed antwoord voor is: nog nooit
-  // getoond, of in oude voortgang overgeslagen. Daarnaast alle woorden die nog fout staan, ook die van
-  // eerdere rondes, en daarna de woorden per aantal keer goed. Samen beslaan de balken
-  // het hele deck. `now` telt per balk hoeveel daarvan deze ronde beantwoord zijn: in de
+  // Links, onder "Nieuw", alle woorden die nog nooit getoond zijn. Daarnaast alle woorden die
+  // nog fout staan, ook die van eerdere rondes, en daarna de woorden per aantal keer goed.
+  // Samen beslaan de balken het hele deck. `now` telt per balk hoeveel daarvan deze ronde beantwoord zijn: in de
   // foutenbalk is dat per se fout gegaan, in een groene balk per se goed. Rechts staan los
   // de woorden op 'niet meer oefenen': die tellen niet mee in de groene balken.
   // De woorden die in de histogram onder '1 keer goed' of hoger staan: de groene balken
@@ -2414,6 +2433,12 @@
   // ---------- Slim oefenen: spaced repetition ----------
   const SMART_MIN_ITEMS = 5;
   const SMART_MAX_INTERVAL = 10; // een woord komt nooit later dan zoveel rondes terug
+  // Vanaf zoveel goede antwoorden staat een woord op het maximale interval: goed gekend.
+  const SMART_KNOWN_GOED = 5;
+  // Focus-rem: had je de vorige ronde zoveel woorden fout, dan tellen ook de woorden die je
+  // pas één keer goed had mee voor het quotum onbekende woorden.
+  const SMART_FOCUS_WRONG = 3;
+  const SMART_FRESH_GOED = 1; // tot en met zoveel goede antwoorden is een woord nog wankel
 
   function fibonacci(n) {
     let a = 1;
@@ -2441,53 +2466,87 @@
     }
     // Een fout antwoord haalt het woord ook weer uit 'niet meer oefenen': blijkbaar ken
     // je het toch niet goed genoeg.
-    return { g: Math.min(Math.floor(state.g / 2), 4), f: state.f + 1, s: round + 1 };
+    // s = round + 1 doet dubbel dienst: ingepland voor de volgende ronde, en daarmee ook het
+    // rondenummer waarin dit woord het laatst getoond is. selectSmartItems sorteert de foute
+    // woorden daarop, dus deze formule niet veranderen zonder die sortering mee te nemen.
+    // g valt harder terug dan de helft en komt nooit hoger uit dan 2: na een fout staat een
+    // woord dus altijd ruim onder SMART_KNOWN_GOED en hoort het weer bij de woorden in
+    // opbouw, die bij de selectie voorrang krijgen (§5).
+    return { g: Math.min(Math.floor(state.g / 2.5), 2), f: state.f + 1, s: round + 1 };
   }
 
-  // Eerst shuffelen, dan stabiel sorteren: gelijke sleutels komen willekeurig te staan.
-  function sortShuffled(entries, key) {
-    return shuffle(entries).sort((a, b) => key(a) - key(b));
+  // Eerst shuffelen, dan stabiel sorteren op de sleutels in volgorde van belang: wie op alle
+  // sleutels gelijk is, komt willekeurig te staan.
+  function sortShuffled(entries, ...keys) {
+    return shuffle(entries).sort((a, b) => {
+      for (const key of keys) {
+        const diff = key(a) - key(b);
+        if (diff) return diff;
+      }
+      return 0;
+    });
   }
 
   // entries: [{ item, state, seen }]. Geeft de gekozen items terug, op relevantie gesorteerd.
-  // maxWrongSkipped is het plafond voor alles wat je nog niet kent samen: foute, nieuwe en
-  // oude overgeslagen woorden. Zo neemt een net toegevoegd lesbestand de ronde niet over en blijft het
+  // maxWrongNew is het plafond voor alles wat je nog niet kent samen: foute en nieuwe
+  // woorden. Zo neemt een net toegevoegd lesbestand de ronde niet over en blijft het
   // aantal onbekende woorden per ronde leerbaar; de rest van de ronde gaat naar woorden die
   // volgens het schema weer aan de beurt zijn.
-  function selectSmartItems(entries, round, { cap, maxWrongSkipped }) {
-    const wrong = sortShuffled(entries.filter((e) => e.state.f > 0), (e) => -e.state.f);
-    // Een opgeslagen staat zonder enig goed en zonder fout kon alleen van de weggehaalde
-    // 'Sla over'-knop komen. Nieuw ontstaat die niet meer, maar oude voortgang kan hem nog
-    // bevatten; zonder deze pool zouden die woorden nooit meer aan de beurt komen.
-    const skippedPool = sortShuffled(
-      entries.filter((e) => e.seen && e.state.f === 0 && e.state.g === 0),
-      (e) => e.state.s
+  function selectSmartItems(entries, round, { cap, maxWrongNew }) {
+    // Deze drie pools dekken samen alles: elk beantwoord woord heeft f > 0 of g > 0.
+    //
+    // Recentst getoond eerst, en pas daarbinnen het vaakst fout. Voor f > 0 geldt
+    // s = de ronde waarin het woord het laatst getoond is + 1 (zie nextState), dus -s is
+    // precies "recentst eerst". Zo maak je een groepje fouten af in plaats van elke ronde
+    // naar andere fouten te springen.
+    const wrong = sortShuffled(
+      entries.filter((e) => e.state.f > 0),
+      (e) => -e.state.s,
+      (e) => -e.state.f,
     );
     // Niet geschud: zo werk je een nieuw lesbestand van voor naar achter door, in plaats van
     // er elke ronde een willekeurige greep uit te doen.
     const unseen = entries.filter((e) => !e.seen);
     const known = entries.filter((e) => e.state.f === 0 && e.state.g > 0);
-    const due = sortShuffled(known.filter((e) => e.state.s <= round), (e) => e.state.s);
+    // Eerst de woorden die je nog niet goed kent, daarbinnen meest over tijd eerst. Zo gaat
+    // een ronde niet op aan de berg bekende woorden terwijl de woorden in opbouw wachten.
+    const due = sortShuffled(
+      known.filter((e) => e.state.s <= round),
+      (e) => (e.state.g >= SMART_KNOWN_GOED ? 1 : 0),
+      (e) => e.state.s,
+    );
     const later = sortShuffled(known.filter((e) => e.state.s > round), (e) => e.state.s);
 
-    // Het quotum gaat op volgorde van urgentie: fout, dan oud-overgeslagen, dan nieuw. Staat de
+    // Een woord met f > 0 heeft s = de ronde waarin het laatst getoond is + 1 (zie nextState),
+    // dus s === round betekent "vorige ronde fout". Door de sortering staan die woorden
+    // vooraan in wrong.
+    const wrongLastRound = wrong.filter((e) => e.state.s === round).length;
+    // De focus-rem: ging het de vorige ronde slecht, dan tellen de wankele woorden (pas één
+    // keer goed, nog niet ingesleten) mee voor het quotum. Zo komt er niets onbekends bij
+    // zolang je nog met die stapel bezig bent. Met shaky = 0 staat hieronder precies de
+    // formule zonder rem.
+    const shaky = wrongLastRound >= SMART_FOCUS_WRONG
+      ? known.filter((e) => e.state.g <= SMART_FRESH_GOED).length
+      : 0;
+
+    // Het quotum gaat op volgorde van urgentie: eerst fout, dan nieuw. Staat de
     // foutenstapel vol, dan komen er dus even geen nieuwe woorden bij — eerst die stapel
     // wegwerken. Wie daar niet op wil wachten kiest "Alle nieuwe woorden".
-    const wrongRoom = Math.min(wrong.length, maxWrongSkipped);
-    const skipRoom = Math.min(skippedPool.length, maxWrongSkipped - wrongRoom);
-    const newRoom = Math.min(unseen.length, maxWrongSkipped - wrongRoom - skipRoom);
+    // De fouten van de vorige ronde zijn de ondergrens: die komen hoe dan ook terug, de rem
+    // gaat alleen ten koste van oudere fouten en van nieuwe woorden. De Math.max(0, ...) is
+    // nodig omdat unseen.slice(0, negatief) stilletjes de laatste nieuwe woorden zou pakken.
+    const wrongRoom = Math.min(wrong.length, maxWrongNew, Math.max(maxWrongNew - shaky, wrongLastRound));
+    const newRoom = Math.max(0, Math.min(unseen.length, maxWrongNew - wrongRoom - shaky));
 
     // Onbekende woorden tellen alleen mee tot hun quotum, zodat een volle foutenstapel of een
     // vers lesbestand de ronde niet eindeloos laat groeien.
-    const load = known.reduce((sum, e) => sum + weightFor(e.state), wrongRoom + skipRoom + newRoom);
+    const load = known.reduce((sum, e) => sum + weightFor(e.state), wrongRoom + newRoom);
     const minItems = Math.min(SMART_MIN_ITEMS, cap, entries.length);
     const target = Math.max(minItems, Math.min(cap, Math.round(load)));
 
     // Op tijd aanvullen met woorden die aan de beurt zijn; daarna met woorden die
     // eigenlijk pas later gepland staan, dichtstbijzijnde ronde eerst.
-    const chosen = wrong.slice(0, wrongRoom)
-      .concat(skippedPool.slice(0, skipRoom))
-      .concat(unseen.slice(0, newRoom));
+    const chosen = wrong.slice(0, wrongRoom).concat(unseen.slice(0, newRoom));
     for (const pool of [due, later]) {
       for (const entry of pool) {
         if (chosen.length >= target) break;
@@ -2507,9 +2566,9 @@
 
     const selected = selectSmartItems(entries, roundNumberFor(), {
       cap: getMaxRoundSize(),
-      maxWrongSkipped: getMaxWrongSkipped(),
+      maxWrongNew: getMaxWrongNew(),
     });
-    return getOrderMode() === "original" ? inDeckOrder(selected) : shuffle(selected);
+    return ordered(selected);
   }
 
   function startSmartRound() {
@@ -2532,32 +2591,67 @@
     target.classList.remove("hidden");
   }
 
-  function renderMistakes() {
-    if (mistakes.length === 0) {
-      mistakesTitle.textContent = "";
-      btnToggleAnswers.classList.add("hidden");
-      mistakesList.innerHTML = '<div class="no-mistakes">Alles goed! 🎉</div>';
-      return;
-    }
+  // Hoe het woord ervoor stond. Kaal blijven de twee gevallen waar de titel van de groep het
+  // al zegt: 'Herhaald goed' (stond goed en ging goed) en een woord in de foutenlijst dat
+  // vorige ronde ook al fout stond.
+  function resultTag(item, correct) {
+    const kind = preKind.get(item);
+    if (kind === "nieuw") return "nieuw";
+    if (correct) return kind === "fout" ? "was fout" : "";
+    return kind === "goed" ? "was goed" : "";
+  }
 
-    mistakesTitle.textContent = `Fout beantwoord (${mistakes.length}):`;
-    btnToggleAnswers.classList.remove("hidden");
+  // Zelfde kant op als tijdens het oefenen: links wat gevraagd werd, rechts het antwoord.
+  function resultRow(item, mark, markClass, correct) {
+    const tag = resultTag(item, correct);
+    // De spatie ervoor is een afbreekpunt: het label mag op een eigen regel eindigen.
+    const tagPart = tag ? ` <span class="result-tag">${tag}</span>` : "";
+    return `<div class="result-row"><span class="result-prompt-wrap"><span class="result-mark ${markClass}">${mark}</span><span class="result-prompt">${escapeHtml(promptWord(item))}</span>${tagPart}</span><span class="result-answer">${escapeHtml(answerWord(item))}</span></div>`;
+  }
+
+  // De drie uitkomsten van een ronde, in volgorde van wat je het eerst wilt zien. De
+  // rechtgezette en de nieuwe woorden staan samen: dat is allebei vooruitgang.
+  function roundGroups() {
+    const good = (known, markClass) => goodItems
+      .filter((item) => (preKind.get(item) === "goed") === known)
+      .map((item) => resultRow(item, "&#10003;", markClass, true));
+    return [
+      // Zonder fouten is 'Fout beantwoord (0)' een armoedige manier om te zeggen dat je
+      // alles goed had; daar hoort de felicitatie.
+      { title: "Fout beantwoord", celebrateWhenEmpty: true, rows: mistakes.map((m) => resultRow(m, "&#10007;", "bad", false)) },
+      { title: "Verbeterd / nieuw goed", rows: good(false, "good") },
+      // Onderhoud, geen vooruitgang: een grijs vinkje houdt de aandacht bij de groep erboven.
+      { title: "Herhaald goed", rows: good(true, "muted") },
+    ];
+  }
+
+  function renderRoundGroups() {
+    btnToggleAnswers.classList.toggle("hidden", answeredItems.length === 0);
     btnToggleAnswers.textContent = answersRevealed ? "Verberg antwoorden" : "Toon antwoorden";
+    roundGroupsEl.classList.toggle("answers-shown", answersRevealed);
 
-    mistakesList.innerHTML = mistakes
-      .map((m) => {
-        // Zelfde kant op als tijdens het oefenen: links wat gevraagd werd, rechts het antwoord.
-        const answerPart = answersRevealed
-          ? `<span class="mistake-answer">${escapeHtml(answerWord(m))}</span>`
-          : "";
-        return `<div class="mistake-row"><span class="mistake-prompt-wrap"><span class="mistake-cross">&#10007;</span><span class="mistake-prompt">${escapeHtml(promptWord(m))}</span></span>${answerPart}</div>`;
+    // De eerste groep die iets te melden heeft staat open; de rest klap je zelf uit. Had je
+    // alles goed, dan is dat vanzelf de groep met je vooruitgang.
+    let openedOne = false;
+    roundGroupsEl.innerHTML = roundGroups()
+      .map(({ title, rows, celebrateWhenEmpty }) => {
+        if (rows.length === 0 && celebrateWhenEmpty) {
+          return '<div class="no-mistakes">Alles goed! 🎉</div>';
+        }
+        // Een lege groep blijft gewoon een toggle: aan de (0) zie je al dat klikken niets
+        // oplevert, en zo staan de drie koppen er altijd hetzelfde bij.
+        const open = openedOne || rows.length === 0 ? "" : " open";
+        openedOne = openedOne || rows.length > 0;
+        return `<details class="round-group"${open}><summary class="round-group-title">${title} (${rows.length})</summary>${rows.join("")}</details>`;
       })
       .join("");
   }
 
   btnToggleAnswers.addEventListener("click", () => {
     answersRevealed = !answersRevealed;
-    renderMistakes();
+    btnToggleAnswers.textContent = answersRevealed ? "Verberg antwoorden" : "Toon antwoorden";
+    // Alleen een klasse omzetten: opnieuw renderen zou de opengeklapte groepen dichtklappen.
+    roundGroupsEl.classList.toggle("answers-shown", answersRevealed);
   });
 
   function goToStartScreen() {
@@ -2577,10 +2671,9 @@
     combinedWords = data.words;
     combinedSentences = data.sentences;
     const allItems = combinedWords.concat(combinedSentences);
-    tagLegacyItemsWithSingleFile(allItems, data.fileNames);
     wordStats = rebuildWordStats(allItems, data.wordStats);
-    roundNumber = normalizeRoundNumber(data.roundNumber);
-    storedMeta = { fileNames: data.fileNames, lastRound: normalizeLastRound(data.lastRound) };
+    roundNumber = data.roundNumber;
+    storedMeta = { fileNames: data.fileNames, lastRound: data.lastRound };
     renderFileList();
   }
 
@@ -2612,8 +2705,8 @@
       label: "Alle foute woorden",
       hint: "Alle woorden die nog fout staan, dus ook die van eerdere rondes. Een woord valt hier pas uit zodra je het weer goed hebt.",
       enabled: (dir) => wrongItems(dir).length > 0,
-      run: () => {
-        startMistakesQuiz();
+      run: (dir) => {
+        beginSession(ordered(wrongItems(dir)));
         return true;
       },
     },
@@ -2784,7 +2877,7 @@
     refreshResumeBanner();
   });
 
-  [selSoundMode, selOrderMode, selMaxRound, selMaxWrongSkipped]
+  [selSoundMode, selOrderMode, selMaxRound, selMaxWrongNew]
     .forEach((el) => el.addEventListener("change", persistSettings));
 
   // ---------- Init ----------

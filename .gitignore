@@ -1,0 +1,9 @@
+# Gescande foto's van woordenlijsten (blijven lokaal)
+Photos/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*~
+.vscode/
+.idea/

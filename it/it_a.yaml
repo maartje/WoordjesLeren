@@ -1,0 +1,29 @@
+lesson: 1
+words:
+  - it: buongiorno
+    nl: hallo, goedendag
+  - it: arrivederci
+    nl: tot ziens
+  - it: molto bene
+    nl: heel goed
+  - it: grazie
+    nl: bedankt
+  - it: è
+    nl: het is
+  - it: l'italiano (m)
+    nl: het Italiaans
+  - it: il professore
+    nl: de docent
+  - it: l'esercizio (m)
+    nl: de opdracht
+  - it: sì
+    nl: ja
+  - it: no
+    nl: nee
+sentences:
+  - it: Come ti chiami?
+    nl: Hoe heet jij?
+  - it: Mi chiamo Leo.
+    nl: Ik heet Leo.
+  - it: Non lo so.
+    nl: Ik weet het niet.

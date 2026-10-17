@@ -1,0 +1,41 @@
+lesson: 2
+words:
+  - it: ascolta
+    nl: luister
+  - it: guarda
+    nl: kijk naar
+  - it: leggi
+    nl: lees
+  - it: scrivi
+    nl: schrijf
+  - it: parla
+    nl: spreek
+  - it: ripeti
+    nl: herhaal
+  - it: rispondi
+    nl: geef antwoord
+  - it: il libro
+    nl: het boek
+  - it: il computer
+    nl: de computer
+  - it: la penna
+    nl: de pen
+  - it: la scuola
+    nl: de school
+  - it: prendi
+    nl: pak, neem
+  - it: apri
+    nl: open
+  - it: chiudi
+    nl: sluit
+  - it: cerca
+    nl: zoek
+  - it: scegli
+    nl: kies
+sentences:
+  - it: Che cos'è?
+    nl: Wat is het?
+  - it: Non capisco.
+    nl: Ik begrijp het niet.
+  - it: Prendi il libro.
+    nl: Pak het boek.
