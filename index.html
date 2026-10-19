@@ -896,8 +896,8 @@
 
         <label class="setting-label" for="sel-sound-mode">Automatisch voorlezen</label>
         <select class="setting-select" id="sel-sound-mode">
-          <option value="off">Uit</option>
-          <option value="foreign" selected>Vreemde taal</option>
+          <option value="off" selected>Uit</option>
+          <option value="foreign">Vreemde taal</option>
           <option value="both">Beide talen</option>
           <option value="listen">Alleen voorlezen</option>
         </select>
@@ -1175,7 +1175,7 @@
   let toastTimer = 0;
   let nextChoice = null; // de keuzeknop die na een antwoord de rol van 'Volgende' heeft
   let direction = "fwd";
-  let soundMode = "foreign";
+  let soundMode = "off";
   let advanceGen = 0;        // elke sprong maakt een nog lopende automatische sprong ongeldig
   // item -> { fwd, rev } met per richting { g, f, s } en optioneel x:
   //   g = aantal_goed, f = aantal rondes achter elkaar fout, s = ronde waarvoor het woord staat ingepland,
