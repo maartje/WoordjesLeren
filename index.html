@@ -14,6 +14,7 @@
     --muted: #6b7280;
     --accent: #3b6df0;
     --accent-dark: #2851c9;
+    --accent-bg: #e8eefd;
     --good: #1f9d55;
     --good-bg: #e6f8ed;
     --bad: #d1372e;
@@ -601,6 +602,38 @@
     color: var(--gold);
   }
   .btn-edit-file svg { width: 12px; height: 12px; }
+  /* Pauze is geen waarschuwing maar een stand: neutraal grijs, naast het rood van
+     verwijderen en het goud van bewerken. Wissen raakt wel de voortgang en krijgt
+     daarom de accentkleur. */
+  .btn-pause-file,
+  .btn-clear-file {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border-radius: 50%;
+  }
+  .btn-pause-file { background: var(--border); color: var(--muted); }
+  .btn-clear-file { background: var(--accent-bg); color: var(--accent); }
+  .btn-pause-file svg,
+  .btn-clear-file svg { width: 12px; height: 12px; }
+  /* Een gepauzeerd bestand doet nergens aan mee; dat moet je in de lijst meteen zien. */
+  .loaded-file-row.paused .loaded-file-name {
+    color: var(--muted);
+    font-style: italic;
+  }
+  .loaded-file-row.paused .btn-edit-file,
+  .loaded-file-row.paused .btn-clear-file { opacity: 0.55; }
+  /* Losse mededeling onder de bestandslijst. Geen .warning: er is niets misgegaan,
+     het is het gevolg van een keuze die de gebruiker zelf net gemaakt heeft. */
+  .file-note {
+    margin-top: 10px;
+    color: var(--muted);
+    font-size: 0.85rem;
+  }
   .loaded-file-name {
     color: var(--text);
   }
@@ -883,6 +916,7 @@
       </div>
       <input type="file" id="file-input" accept=".yaml,.yml" multiple>
       <div class="file-list" id="file-list"></div>
+      <div class="file-note hidden" id="paused-note">Alle lesbestanden staan op pauze &mdash; er is niets te oefenen.</div>
       <div class="warning hidden" id="start-warning"></div>
     </section>
     <details class="section section-fold">
@@ -1086,10 +1120,19 @@
 
 <dialog class="confirm-dialog" id="confirm-new-session">
   <div class="confirm-title">Nieuwe sessie starten?</div>
-  <div class="confirm-text">Je voortgang voor deze richting wordt gewist en je begint weer met het hele deck. De lesbestanden blijven staan.</div>
+  <div class="confirm-text">Je voortgang voor deze richting wordt gewist en je begint weer met het hele deck. De lesbestanden blijven staan; wat in een gepauzeerd bestand staat blijft bewaard.</div>
   <div class="confirm-actions">
     <button class="btn-confirm-cancel" id="btn-confirm-cancel" type="button">Annuleren</button>
     <button class="btn-confirm-ok" id="btn-confirm-ok" type="button">Ja, opnieuw beginnen</button>
+  </div>
+</dialog>
+
+<dialog class="confirm-dialog" id="confirm-clear-file">
+  <div class="confirm-title">Voortgang wissen?</div>
+  <div class="confirm-text" id="confirm-clear-text"></div>
+  <div class="confirm-actions">
+    <button class="btn-confirm-cancel" id="btn-confirm-clear-cancel" type="button">Annuleren</button>
+    <button class="btn-confirm-ok" id="btn-confirm-clear-ok" type="button">Ja, wissen</button>
   </div>
 </dialog>
 
@@ -1107,6 +1150,7 @@
   const fileLabelEl = document.getElementById("file-label");
   const fileListEl = document.getElementById("file-list");
   const startWarning = document.getElementById("start-warning");
+  const pausedNote = document.getElementById("paused-note");
 
   const progressText = document.getElementById("progress-text");
   const scoreText = document.getElementById("score-text");
@@ -1157,6 +1201,11 @@
   const btnConfirmOk = document.getElementById("btn-confirm-ok");
   const btnConfirmCancel = document.getElementById("btn-confirm-cancel");
 
+  const confirmClearDialog = document.getElementById("confirm-clear-file");
+  const confirmClearText = document.getElementById("confirm-clear-text");
+  const btnConfirmClearOk = document.getElementById("btn-confirm-clear-ok");
+  const btnConfirmClearCancel = document.getElementById("btn-confirm-clear-cancel");
+
   // ---------- State ----------
   let playlist = [];
   let currentIndex = 0;
@@ -1196,7 +1245,7 @@
   const STORAGE_KEY = "woordjesleren:progress:v1";
   // Altijd compleet, ook zonder opslag: zo hoeft geen enkele lezer op een ontbrekend veld
   // te controleren. loadPendingDeck() vervangt hem door de opgeslagen versie.
-  let storedMeta = { fileNames: [], lastRound: { fwd: null, rev: null } };
+  let storedMeta = { fileNames: [], pausedFiles: [], lastRound: { fwd: null, rev: null } };
   // De oefenvorm die de gebruiker zelf uit het menu koos; null = nog geen keuze. Gaat mee in
   // persistState(), zodat hij een herlaad overleeft. Geldt voor beide richtingen samen.
   let preferredPractice = null;
@@ -1240,6 +1289,9 @@
 
   function resetCurrentDirectionStats() {
     for (const [item, entry] of wordStats.entries()) {
+      // Een gepauzeerd bestand doet nergens aan mee, ook niet aan "Nieuwe sessie": zijn
+      // voortgang blijft staan tot je het weer aanzet. Dat is het verschil met verwijderen.
+      if (isPausedFile(item.file)) continue;
       delete entry[direction];
       if (!entry.fwd && !entry.rev) wordStats.delete(item);
     }
@@ -1269,6 +1321,7 @@
       Object.assign(storedMeta, patch);
       const data = {
         fileNames: storedMeta.fileNames,
+        pausedFiles: storedMeta.pausedFiles,
         lastRound: storedMeta.lastRound,
         direction: direction,
         soundMode: getSoundMode(),
@@ -1300,7 +1353,12 @@
 
   // Voortgang telt per richting: elke richting heeft zijn eigen statistieken.
   function hasProgressFor(dir) {
-    for (const entry of wordStats.values()) if (entry[dir]) return true;
+    // Alleen de actieve stapel: voortgang die in een gepauzeerd bestand zit telt niet mee,
+    // want daar oefen je nu niet mee.
+    for (const item of deckItems()) {
+      const entry = wordStats.get(item);
+      if (entry && entry[dir]) return true;
+    }
     return false;
   }
 
@@ -1420,18 +1478,42 @@
   let combinedWords = [];
   let combinedSentences = [];
 
-  function renderFileList() {
-    const names = storedMeta.fileNames;
-    fileLabelEl.textContent = names.length ? "Voeg lesbestand(en) toe" : "Kies lesbestand(en)";
-    fileListEl.innerHTML = names
-      .map((name) => `<div class="loaded-file-row" data-file="${escapeHtml(name)}">
-        <button class="btn-remove-file" type="button" aria-label="Verwijder ${escapeHtml(name)}">&times;</button>
+  // Pauze geldt per lesbestand en staat los van 'niet meer oefenen', dat per woord geldt.
+  function isPausedFile(fileName) {
+    return storedMeta.pausedFiles.includes(fileName);
+  }
+
+  const ICON_PAUSE = "M6 5h4v14H6zM14 5h4v14h-4z";
+  const ICON_PLAY = "M8 5v14l11-7z";
+  const ICON_CLEAR = "M12 5V1L7 6l5 5V7a6 6 0 1 1-6 6H4a8 8 0 1 0 8-8z";
+
+  function fileRowHtml(name) {
+    const paused = isPausedFile(name);
+    const pauseHint = paused
+      ? "Woorden uit dit bestand weer meedoen"
+      : "Woorden uit dit bestand tijdelijk niet meer tonen";
+    return `<div class="loaded-file-row${paused ? " paused" : ""}" data-file="${escapeHtml(name)}">
+        <button class="btn-remove-file" type="button" aria-label="Verwijder ${escapeHtml(name)}" title="Verwijder dit lesbestand">&times;</button>
         <button class="btn-edit-file" type="button" aria-label="Bewerk ${escapeHtml(name)}" title="Bewerk ${escapeHtml(name)}">
           <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.21a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
         </button>
+        <button class="btn-pause-file" type="button" aria-label="${escapeHtml(pauseHint)}: ${escapeHtml(name)}" title="${escapeHtml(pauseHint)}">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${paused ? ICON_PLAY : ICON_PAUSE}"/></svg>
+        </button>
+        <button class="btn-clear-file" type="button" aria-label="Wis de voortgang van ${escapeHtml(name)}" title="De voortgang voor alleen dit bestand wissen">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${ICON_CLEAR}"/></svg>
+        </button>
         <span class="loaded-file-name">${escapeHtml(name)}</span>
-      </div>`)
-      .join("");
+      </div>`;
+  }
+
+  function renderFileList() {
+    const names = storedMeta.fileNames;
+    fileLabelEl.textContent = names.length ? "Voeg lesbestand(en) toe" : "Kies lesbestand(en)";
+    fileListEl.innerHTML = names.map(fileRowHtml).join("");
+    // Zonder actieve woorden verbergt refreshResumeBanner() de startknoppen; zonder deze
+    // regel zou de gebruiker niet zien waaróm ze weg zijn.
+    pausedNote.classList.toggle("hidden", names.length === 0 || deckItems().length > 0);
   }
 
   function removeFile(fileName) {
@@ -1443,16 +1525,68 @@
     combinedWords = combinedWords.filter(keep);
     combinedSentences = combinedSentences.filter(keep);
     storedMeta.fileNames = storedMeta.fileNames.filter((n) => n !== fileName);
+    // Anders blijft de naam als gepauzeerd in de opslag staan en komt hetzelfde bestand
+    // later op pauze terug.
+    storedMeta.pausedFiles = storedMeta.pausedFiles.filter((n) => n !== fileName);
     renderFileList();
-    persistState({ fileNames: storedMeta.fileNames });
+    persistState({ fileNames: storedMeta.fileNames, pausedFiles: storedMeta.pausedFiles });
     refreshResumeBanner();
   }
+
+  function togglePause(fileName) {
+    storedMeta.pausedFiles = isPausedFile(fileName)
+      ? storedMeta.pausedFiles.filter((n) => n !== fileName)
+      : storedMeta.pausedFiles.concat(fileName);
+    renderFileList();
+    persistState({ pausedFiles: storedMeta.pausedFiles });
+    refreshResumeBanner();
+  }
+
+  // De voortgang van één lesbestand wissen: de hele entry weg, dus beide richtingen en ook
+  // de vlag 'niet meer oefenen'. De woorden zijn daarna weer nieuw. roundNumber blijft
+  // staan: dat is de klok van het hele systeem, niet van één bestand.
+  function clearFileProgress(fileName) {
+    const cleared = new Set();
+    for (const item of combinedWords.concat(combinedSentences)) {
+      if (item.file !== fileName) continue;
+      cleared.add(itemKey(item));
+      wordStats.delete(item);
+    }
+    // De fouten van de laatste ronde staan als itemKey opgeslagen. Laat je die staan, dan
+    // blijft "Foute woorden deze ronde" net gewiste woorden aanbieden.
+    const prune = (entry) => (entry
+      ? { ...entry, wrong: (entry.wrong || []).filter((key) => !cleared.has(key)) }
+      : entry);
+    storedMeta.lastRound = { fwd: prune(storedMeta.lastRound.fwd), rev: prune(storedMeta.lastRound.rev) };
+    renderFileList();
+    persistState({ lastRound: storedMeta.lastRound });
+    refreshResumeBanner();
+  }
+
+  // De naam van het bestand waar de wis-dialoog nu over gaat.
+  let pendingClearFile = null;
+
+  function askClearFile(fileName) {
+    pendingClearFile = fileName;
+    confirmClearText.textContent = `De voortgang van "${fileName}" wordt gewist, in beide richtingen. `
+      + "De woorden zijn daarna weer nieuw; het lesbestand zelf blijft staan.";
+    confirmClearDialog.showModal();
+  }
+
+  btnConfirmClearCancel.addEventListener("click", () => confirmClearDialog.close());
+  btnConfirmClearOk.addEventListener("click", () => {
+    confirmClearDialog.close();
+    if (pendingClearFile !== null) clearFileProgress(pendingClearFile);
+    pendingClearFile = null;
+  });
 
   fileListEl.addEventListener("click", (e) => {
     const row = e.target.closest(".loaded-file-row");
     if (!row) return;
     if (e.target.closest(".btn-remove-file")) removeFile(row.dataset.file);
     else if (e.target.closest(".btn-edit-file")) openEditScreen(row.dataset.file);
+    else if (e.target.closest(".btn-pause-file")) togglePause(row.dataset.file);
+    else if (e.target.closest(".btn-clear-file")) askClearFile(row.dataset.file);
   });
 
   fileInput.addEventListener("change", async () => {
@@ -1892,13 +2026,13 @@
   }
 
   function hasDeck() {
-    return combinedWords.length + combinedSentences.length > 0;
+    return deckItems().length > 0;
   }
 
   // Dezelfde selectie, maar in deckvolgorde in plaats van op relevantie of willekeurig.
   function inDeckOrder(items) {
     const chosen = new Set(items);
-    return combinedWords.concat(combinedSentences).filter((item) => chosen.has(item));
+    return deckItems().filter((item) => chosen.has(item));
   }
 
   function buildPlaylist(words, sentences) {
@@ -1915,8 +2049,20 @@
     return getOrderMode() === "original" ? inDeckOrder(items) : shuffle(items);
   }
 
+  // combinedWords/combinedSentences blijven de volledige voorraad: die wordt opgeslagen en
+  // het bewerkscherm werkt erop, ook voor een gepauzeerd bestand. Alles wat met oefenen,
+  // tellen of statistieken te maken heeft gaat via deckItems() en ziet de gepauzeerde
+  // bestanden dus niet - alsof ze er niet tussen staan.
+  function activeWords() {
+    return combinedWords.filter((item) => !isPausedFile(item.file));
+  }
+
+  function activeSentences() {
+    return combinedSentences.filter((item) => !isPausedFile(item.file));
+  }
+
   function deckItems() {
-    return combinedWords.concat(combinedSentences);
+    return activeWords().concat(activeSentences());
   }
 
   // Alle woorden die nog fout staan, niet alleen de fouten van deze ronde. In deckvolgorde:
@@ -2002,7 +2148,7 @@
     answered = false;
     const item = currentItem();
     // Bij een slimme ronde is de ronde kleiner dan het deck; dan ook tonen hoeveel woorden er in totaal zijn.
-    const deckSize = combinedWords.length + combinedSentences.length;
+    const deckSize = deckItems().length;
     progressText.textContent = playlist.length === deckSize
       ? `Woord ${currentIndex + 1} van ${playlist.length}`
       : `Woord ${currentIndex + 1} van ${playlist.length} (${deckSize} in totaal)`;
@@ -2401,7 +2547,7 @@
   // plus de gouden. Een woord dat nu fout staat telt niet mee, ook al had je het eerder
   // goed; het staat dan in de rode balk. Nooit beantwoorde woorden tellen ook niet mee.
   function countGoodWords() {
-    const deck = combinedWords.concat(combinedSentences);
+    const deck = deckItems();
     const good = deck.filter((item) => {
       const state = stateFor(item);
       return state.f === 0 && (state.g > 0 || state.x);
@@ -2412,7 +2558,7 @@
   function computeHistogramBuckets(answeredNow) {
     const buckets = [0, 0, 0, 0, 0, 0, 0, 0];
     const now = [0, 0, 0, 0, 0, 0, 0, 0];
-    for (const item of combinedWords.concat(combinedSentences)) {
+    for (const item of deckItems()) {
       const state = stateFor(item);
       // Uitgesloten woorden staan apart in de gouden balk en tellen dus niet mee in groen.
       const bucket = state.x
@@ -2583,9 +2729,10 @@
   }
 
   // Woorden op 'niet meer oefenen' vallen hier af en niet in selectSmartItems: zo tellen
-  // ze ook niet mee voor het minimum aantal woorden per ronde.
+  // ze ook niet mee voor het minimum aantal woorden per ronde. Gepauzeerde bestanden vallen
+  // om dezelfde reden al in deckItems() af, en tellen dus ook niet mee voor de rondegrootte.
   function buildSmartPlaylist() {
-    const entries = combinedWords.concat(combinedSentences)
+    const entries = deckItems()
       .map((item) => ({ item, state: stateFor(item), seen: hasStateFor(item) }))
       .filter((entry) => !entry.state.x);
     if (entries.length === 0) return [];
@@ -2699,7 +2846,14 @@
     const allItems = combinedWords.concat(combinedSentences);
     wordStats = rebuildWordStats(allItems, data.wordStats);
     roundNumber = data.roundNumber;
-    storedMeta = { fileNames: data.fileNames, lastRound: data.lastRound };
+    // pausedFiles is als enige veld optioneel: het kwam er later bij, en het verplicht
+    // stellen in loadStoredState() zou elke opslag van vóór de pauzeknop ongeldig maken en
+    // dus de voortgang wissen. Ontbreekt het, dan staat er eenvoudigweg niets op pauze.
+    storedMeta = {
+      fileNames: data.fileNames,
+      pausedFiles: Array.isArray(data.pausedFiles) ? data.pausedFiles : [],
+      lastRound: data.lastRound,
+    };
     renderFileList();
   }
 
@@ -2742,7 +2896,7 @@
       hint: "Het hele deck in één ronde; het maximum aantal woorden per ronde geldt hier niet.",
       enabled: () => hasDeck(),
       run: () => {
-        startQuiz(combinedWords, combinedSentences);
+        startQuiz(activeWords(), activeSentences());
         return true;
       },
     },
@@ -2891,9 +3045,11 @@
     startNewSession();
   });
 
-  // Zonder deck valt er niets te bewaren: persistState schrijft het deck mee.
+  // Zonder deck valt er niets te bewaren: persistState schrijft het deck mee. Hier telt de
+  // volledige voorraad, niet de actieve stapel: staat alles op pauze, dan is er nog steeds
+  // een deck om de instellingen bij te bewaren.
   function persistSettings() {
-    if (hasDeck()) persistState();
+    if (combinedWords.length + combinedSentences.length > 0) persistState();
   }
 
   // Richting wijzigen laadt de statistieken van die richting (elke richting heeft zijn eigen statistieken).
