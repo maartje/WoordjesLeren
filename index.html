@@ -44,6 +44,19 @@
     justify-content: center;
     padding: 24px;
   }
+  /* De kaart en de melding eronder horen bij elkaar. Deze omhulling geeft de melding een plek
+     recht onder de kaart, zonder dat de kaart ervan opschuift: de melding staat erbuiten. */
+  .stage {
+    position: relative;
+    width: 100%;
+    max-width: 560px;
+  }
+  /* Tijdens het oefenen kan er een melding onder de kaart komen. Die ruimte wordt altijd al
+     vrijgehouden, ook als er niets staat: anders zou de kaart opschuiven zodra de melding komt,
+     of zou de melding op een laag scherm onder de rand vallen. */
+  .stage:has(#screen-quiz:not(.hidden)) {
+    margin-bottom: 92px;
+  }
   .card {
     background: var(--card-bg);
     border: 1px solid var(--border);
@@ -364,14 +377,16 @@
     min-height: 41px;
     margin-top: 16px;
   }
-  /* De melding na 'Weet ik' staat los van de kaart, onderin beeld: hij hoort bij het woord dat
-     net voorbijkwam, niet bij de vraag die er nu staat. De keuzes erin zijn links, geen knoppen:
-     ze vragen geen aandacht, maar ze zijn er als je ze nodig hebt. */
+  /* De melding na 'Weet ik' staat net buiten de kaart, er vlak onder: hij hoort bij het woord
+     dat net voorbijkwam, niet bij de vraag die er nu staat. Zo liggen de keuzes erin wel binnen
+     handbereik van de knop waar je zojuist op klikte. Het zijn links, geen knoppen: ze vragen
+     geen aandacht, maar ze zijn er als je ze nodig hebt. Omdat de melding uit de stroom staat,
+     blijft de kaart staan waar hij staat, of de melding er nu is of niet. */
   .toast {
-    position: fixed;
-    right: 24px;
-    bottom: 24px;
-    max-width: calc(100% - 48px);
+    position: absolute;
+    top: calc(100% + 12px);
+    left: 0;
+    right: 0;
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -844,9 +859,16 @@
     }
     .settings .setting-label + .setting-select { margin-bottom: 8px; }
   }
-  /* Op een smal scherm past de melding niet meer naast zichzelf: over de volle breedte. */
+  /* Op een smal scherm past de melding niet meer naast zichzelf: over de volle breedte. En daar
+     vult de kaart bijna het hele scherm, dus onder de kaart zou de melding buiten beeld vallen;
+     hij gaat terug naar de vaste plek onderin. Een muis die ergens heen moet is er toch niet. */
   @media (max-width: 520px) {
+    /* De melding hangt hier aan het scherm, niet aan de kaart: de vrijgehouden ruimte onder de
+       kaart is dan alleen maar in de weg. */
+    .stage:has(#screen-quiz:not(.hidden)) { margin-bottom: 0; }
     .toast {
+      position: fixed;
+      top: auto;
       right: 16px;
       bottom: 16px;
       left: 16px;
@@ -877,6 +899,8 @@
 </head>
 <body>
 
+<!-- De omhulling om de kaart heen is het ankerpunt voor de melding eronder. -->
+<div class="stage">
 <div class="card" id="card">
 
   <!-- Vaste kop boven alle schermen: het logo is tegelijk de weg terug naar het startscherm. -->
@@ -1117,6 +1141,8 @@
     <button id="btn-exclude" type="button">Markeer als bekend (niet meer tonen)</button>
   </div>
 </div>
+
+</div><!-- /.stage -->
 
 <dialog class="confirm-dialog" id="confirm-new-session">
   <div class="confirm-title">Nieuwe sessie starten?</div>
