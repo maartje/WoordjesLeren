@@ -943,8 +943,10 @@
       <div class="file-note hidden" id="paused-note">Alle lesbestanden staan op pauze &mdash; er is niets te oefenen.</div>
       <div class="warning hidden" id="start-warning"></div>
     </section>
-    <details class="section section-fold">
-      <summary class="section-toggle"><h2 class="section-title">Instellingen</h2></summary>
+    <!-- Richting en voorlezen stel je per oefensessie in; daarom staan ze buiten de
+         Instellingen-uitklapper, die de zelden gebruikte instellingen bevat. -->
+    <section class="section">
+      <h2 class="section-title">Oefenen</h2>
       <div class="settings">
         <label class="setting-label" for="sel-direction">Richting</label>
         <select class="setting-select" id="sel-direction">
@@ -959,15 +961,19 @@
           <option value="both">Beide talen</option>
           <option value="listen">Alleen voorlezen</option>
         </select>
-
+      </div>
+    </section>
+    <details class="section section-fold">
+      <summary class="section-toggle"><h2 class="section-title">Instellingen</h2></summary>
+      <div class="settings">
         <label class="setting-label" for="sel-order-mode">Volgorde</label>
         <select class="setting-select" id="sel-order-mode">
           <option value="random" selected>Willekeurige volgorde</option>
           <option value="original">Originele volgorde</option>
         </select>
 
-        <!-- Deze twee sturen alleen de selectie van "Slim oefenen"; de instellingen erboven
-             gelden voor elke ronde. -->
+        <!-- Deze twee sturen alleen de selectie van "Slim oefenen"; Volgorde hierboven
+             geldt voor elke ronde. -->
         <div class="settings-subtitle">Slim oefenen</div>
         <label class="setting-label" for="sel-max-wrong-new">Max. foute/nieuwe woorden<span class="hint-icon" tabindex="0" title="Maximaal aantal onbekende woorden waarop de focus ligt. Mensen kunnen typisch niet meer dan 5 tot 10 nieuwe woorden in een keer leren.">?</span></label>
         <select class="setting-select" id="sel-max-wrong-new">
