@@ -293,11 +293,49 @@
     border-radius: 50%;
   }
   .btn-submit svg { width: 20px; height: 20px; }
-  /* 'Alleen voorlezen': je typt niet en je leest niet mee. Het scherm blijft van woord tot
-     woord hetzelfde; alles wat er na een antwoord bij zou komen hoor je in plaats daarvan. */
+  /* 'Voorlezen en inspreken': je typt niet en je leest niet mee. Het scherm blijft van woord
+     tot woord hetzelfde; alles wat er na een antwoord bij zou komen hoor je in plaats daarvan. */
   #screen-quiz.listen-mode .answer-wrap,
   #screen-quiz.listen-mode .feedback-slot,
   #screen-quiz.listen-mode .after-answer { display: none; }
+  /* De microfoonknop neemt de plek in van het invoerveld dat die modus net verborgen heeft.
+     Hij staat er alleen als de browser spraakherkenning heeft. */
+  .btn-record {
+    display: none;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: var(--accent-bg);
+    color: var(--accent-dark);
+    border: 1px solid var(--accent);
+  }
+  .btn-record svg { width: 20px; height: 20px; }
+  /* Rood terwijl de microfoon openstaat, met dezelfde tinten als 'Weet ik niet': dat is in deze
+     app al de kleur van 'er gebeurt nu iets wat fout kan gaan'. */
+  .btn-record.listening {
+    background: var(--bad-bg);
+    color: var(--bad);
+    border-color: var(--bad-border);
+    animation: record-pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes record-pulse { 50% { opacity: 0.55; } }
+  @media (prefers-reduced-motion: reduce) {
+    .btn-record.listening { animation: none; }
+  }
+  /* Eigen regel en niet de feedback-slot: daar schrijft handleResult het juiste antwoord in, en
+     dat hoort in deze modus juist niet in beeld te komen. Hier staat alleen wat er verstaan is. */
+  .heard {
+    display: none;
+    min-height: 1.4em;
+    margin-top: 10px;
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+  .heard.bad { color: var(--bad); }
+  #screen-quiz.speak-mode .btn-record { display: inline-flex; }
+  #screen-quiz.speak-mode .heard { display: block; }
   .buttons {
     display: flex;
     gap: 10px;
@@ -990,7 +1028,7 @@
           <option value="off" selected>Uit</option>
           <option value="foreign">Vreemde taal</option>
           <option value="both">Beide talen</option>
-          <option value="listen">Alleen voorlezen</option>
+          <option value="listen">Voorlezen en inspreken</option>
         </select>
       </div>
     </section>
@@ -1093,6 +1131,18 @@
         </svg>
       </button>
     </div>
+    <!-- Vervangt het invoerveld in 'Voorlezen en inspreken'; 'Weet ik' en 'Weet ik niet' blijven
+         gewoon staan, want zonder die twee kom je een woord dat de herkenner niet pakt nooit uit. -->
+    <button class="btn-record" id="btn-record" type="button">
+      <!-- Een opnamestip en bewust geen microfoon: het promptvak hiernaast heeft al een
+           microfoon-icoon, en dat betekent juist 'lees voor'. Twee gelijke iconen met
+           tegengestelde betekenis op hetzelfde scherm is vragen om verwarring. -->
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="7" fill="currentColor"/>
+      </svg>
+      <span id="btn-record-label">Spreek in</span>
+    </button>
+    <div class="heard" id="heard"></div>
     <!-- De terugkoppeling hoort bij wat je net typte, dus staat hij direct onder het veld.
          De omhullende div houdt die plek vrij, ook als er nog niets staat. -->
     <div class="feedback-slot">
@@ -1226,6 +1276,9 @@
   const btnKnow = document.getElementById("btn-know");
   const btnDontKnow = document.getElementById("btn-dontknow");
   const btnNext = document.getElementById("btn-next");
+  const btnRecord = document.getElementById("btn-record");
+  const btnRecordLabel = document.getElementById("btn-record-label");
+  const heardEl = document.getElementById("heard");
   const feedbackEl = document.getElementById("feedback");
   const toastEl = document.getElementById("toast");
   const toastMessage = document.getElementById("toast-message");
@@ -2170,8 +2223,14 @@
     return soundMode === "listen";
   }
 
-  // 'Alleen voorlezen' leest altijd beide talen voor: in de richting Nederlands -> vreemde taal
-  // zou er anders niets te horen zijn, en dan heeft die stand geen zin.
+  // Dezelfde modus, maar alleen waar de browser ook echt kan luisteren. Zonder herkenning blijft
+  // 'listen' precies de oude stand 'Alleen voorlezen'.
+  function isSpeakMode() {
+    return isListenMode() && recognitionSupported;
+  }
+
+  // 'Voorlezen en inspreken' leest altijd beide talen voor: in de richting Nederlands -> vreemde
+  // taal zou er anders niets te horen zijn, en dan heeft die stand geen zin.
   function shouldSpeak(lang) {
     if (soundMode === "off") return false;
     if (soundMode === "both" || soundMode === "listen") return true;
@@ -2206,6 +2265,7 @@
     soundMode = getSoundMode();
     cancelAutoAdvance();
     screenQuiz.classList.toggle("listen-mode", isListenMode());
+    screenQuiz.classList.toggle("speak-mode", isSpeakMode());
 
     showScreen(screenQuiz);
 
@@ -2236,14 +2296,19 @@
     feedbackEl.textContent = "";
     preAnswerState = null;
     btnNext.classList.add("hidden");
+    btnRecord.disabled = false;
+    resetRecordButton();
+    showHeard("", false);
     nextChoice = null;
     for (const [button, label] of [[btnKnow, "Weet ik"], [btnDontKnow, "Weet ik niet"]]) {
       button.classList.remove("hidden", "as-next");
       button.textContent = label;
     }
-    // Het invoerveld is verborgen in 'Alleen voorlezen' en kan dan geen focus krijgen;
-    // 'Weet ik' wel, zodat de toetsenbordflow Enter - Enter per woord blijft.
-    if (isListenMode()) btnKnow.focus(); else answerInput.focus();
+    // Het invoerveld is verborgen in 'Voorlezen en inspreken' en kan dan geen focus krijgen. De
+    // opnameknop wel, en anders 'Weet ik', zodat de toetsenbordflow Enter - Enter blijft werken.
+    if (isSpeakMode()) btnRecord.focus();
+    else if (isListenMode()) btnKnow.focus();
+    else answerInput.focus();
 
     if (shouldSpeak(promptLang(item))) {
       speak(promptWord(item), promptLang(item));
@@ -2258,6 +2323,7 @@
 
   function goToNextItem() {
     cancelAutoAdvance();
+    stopRecognition();
     currentIndex += 1;
     if (currentIndex >= playlist.length) {
       showEndScreen();
@@ -2348,10 +2414,126 @@
     if (item) speak(promptWord(item), promptLang(item));
   });
 
+  // ---------- Inspreken (Web Speech API) ----------
+  // Alleen Chrome en Edge hebben SpeechRecognition; in Firefox zit het achter een flag. Zonder
+  // herkenning blijft 'listen' de oude modus, en zegt het label in de select dat ook.
+  const SpeechRecognitionImpl = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const recognitionSupported = !!SpeechRecognitionImpl;
+  if (!recognitionSupported) {
+    const listenOption = selSoundMode.querySelector('option[value="listen"]');
+    if (listenOption) listenOption.textContent = "Alleen voorlezen";
+  }
+
+  const RECOGNITION_ERRORS = {
+    "not-allowed": "Geen toegang tot de microfoon.",
+    "service-not-allowed": "Geen toegang tot de microfoon.",
+    "no-speech": "Niets gehoord, probeer het nog eens.",
+    "audio-capture": "Geen microfoon gevonden.",
+    "network": "Geen verbinding met de spraakherkenning.",
+    "language-not-supported": "Deze taal wordt niet herkend.",
+  };
+
+  let recognition = null;
+  let listening = false;
+
+  function resetRecordButton() {
+    listening = false;
+    btnRecordLabel.textContent = "Spreek in";
+    btnRecord.classList.remove("listening");
+  }
+
+  function showHeard(text, bad) {
+    heardEl.textContent = text;
+    heardEl.classList.toggle("bad", !!bad);
+  }
+
+  // Bij elk volgend woord en bij het verlaten van de ronde: de microfoon mag nooit aanblijven
+  // nadat het scherm verdergaat. abort() laat onend lopen, die zet de knop terug.
+  function stopRecognition() {
+    if (recognition) recognition.abort();
+    resetRecordButton();
+  }
+
+  // Op het apparaat zelf als dat kan: dan blijft de audio lokaal en werkt het ook offline. Staat
+  // het taalpakket alleen klaar om te downloaden, dan blijft het bij de cloud - zo'n pakket
+  // binnenhalen zonder het te vragen is geen verrassing die je wilt. Het antwoord verandert niet
+  // tussendoor, dus één keer per taal opzoeken is genoeg.
+  const localProcessing = new Map();
+  async function wantsLocalProcessing(tag) {
+    if (localProcessing.has(tag)) return localProcessing.get(tag);
+    let local = false;
+    try {
+      if (SpeechRecognitionImpl.available) {
+        local = (await SpeechRecognitionImpl.available({ langs: [tag], processLocally: true })) === "available";
+      }
+    } catch (err) {
+      local = false;
+    }
+    localProcessing.set(tag, local);
+    return local;
+  }
+
+  async function startRecognition() {
+    if (listening || answered) return;
+    const item = currentItem();
+    if (!item) return;
+    // Een woord komt in beeld en wordt voorgelezen; die stem mag de microfoon niet oppikken.
+    if (speechSupported) window.speechSynthesis.cancel();
+
+    const tag = toBcp47(answerLang(item));
+    const local = await wantsLocalProcessing(tag);
+    recognition = new SpeechRecognitionImpl();
+    recognition.lang = tag;
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    // Homofonen ('vert' / 'verre' / 'vers') zijn bij één los woord niet uit elkaar te houden:
+    // er is geen zinscontext om uit te kiezen. Alle alternatieven meewegen scheelt valse
+    // afkeuringen, en een homofoon te veel goedrekenen is hier het kleinere kwaad.
+    recognition.maxAlternatives = 5;
+    recognition.processLocally = local;
+
+    recognition.onresult = (e) => {
+      const heard = Array.from(e.results[0] || []).map((alt) => alt.transcript);
+      // isCorrectAnswer doet al kleine letters, diacrieten, witruimte, afsluitende leestekens
+      // en komma-synoniemen - precies wat er van een herkenner uit komt.
+      if (heard.some((text) => isCorrectAnswer(text, answerWord(item)))) {
+        showHeard("", false);
+        handleResult(true, true);
+        return;
+      }
+      // Mis boekt niets, net als een verkeerd getypt antwoord bij showRetry(). Een herkenner is
+      // een wisselvallige scheidsrechter; die mag de planning niet terugzetten. Echt fout
+      // rekenen doe je met 'Weet ik niet'.
+      showHeard(heard[0] ? `gehoord: "${heard[0]}"` : "Niet verstaan.", true);
+    };
+    recognition.onerror = (e) => {
+      showHeard(RECOGNITION_ERRORS[e.error] || "Inspreken lukte niet.", true);
+    };
+    recognition.onend = resetRecordButton;
+
+    try {
+      recognition.start();
+      listening = true;
+      btnRecordLabel.textContent = "Luisteren…";
+      btnRecord.classList.add("listening");
+    } catch (err) {
+      resetRecordButton();
+      showHeard("Inspreken lukte niet.", true);
+    }
+  }
+
+  btnRecord.addEventListener("click", () => {
+    if (listening) stopRecognition();
+    else startRecognition();
+  });
+
   // ---------- Answer handling ----------
   function markAnswered(autoAdvance) {
     answered = true;
-    // In 'Alleen voorlezen' blijft het scherm staan zoals het staat: geen antwoord in beeld,
+    // Staat buiten de listen-tak hieronder: in 'Voorlezen en inspreken' keert die vroeg terug,
+    // en dan zou de microfoonknop als enige bruikbaar blijven tijdens de pauze.
+    btnRecord.disabled = true;
+    // In 'Voorlezen en inspreken' blijft het scherm staan zoals het staat: geen antwoord in beeld,
     // geen 'Volgende', en de knoppen vergrijzen niet tijdens de korte pauze. Verdere klikken
     // vangt de 'answered'-controle hierboven af.
     if (isListenMode()) return;
@@ -2397,7 +2579,8 @@
   }
 
   // viaCheck: het antwoord is ingetypt en door de controle goedgekeurd. Alleen dan springt hij
-  // vanzelf door (en in 'Alleen voorlezen'); na 'Weet ik' en 'Weet ik niet' wacht hij op jou.
+  // vanzelf door (en in 'Voorlezen en inspreken'); na 'Weet ik' en 'Weet ik niet' wacht hij op
+  // jou. Een herkend gesproken antwoord komt hier ook met viaCheck binnen: ook goedgekeurd.
   function handleResult(correct, viaCheck) {
     if (answered) return;
     hideToast(); // de melding gaat over het vorige woord; dat is nu voorbij
@@ -2426,11 +2609,12 @@
     markAnswered(autoAdvance);
 
     // Elk goed woord kun je nog bijsturen: je gokte misschien goed, of je kent het allang.
-    // In 'Alleen voorlezen' niet, want daar antwoord je zelf niets.
+    // In 'Voorlezen en inspreken' niet: daar springt het scherm meteen door, dus de melding zou
+    // je toch ontgaan.
     if (correct && !isListenMode()) showKnowToast(item);
 
     // Een ingetypt goed antwoord heeft geen nabespreking nodig: uitspreken en doorspringen,
-    // net als in 'Alleen voorlezen'. Bij 'Weet ik' en 'Weet ik niet' blijft het scherm staan,
+    // net als in 'Voorlezen en inspreken'. Bij 'Weet ik' en 'Weet ik niet' blijft het scherm staan,
     // want dan wil je het juiste antwoord rustig kunnen lezen.
     if (autoAdvance) {
       speakAnswerThenAdvance(answerText, answerLang(item));
@@ -2942,6 +3126,7 @@
   function goToStartScreen() {
     cancelAutoAdvance();
     if (speechSupported) window.speechSynthesis.cancel();
+    stopRecognition();
     showScreen(screenStart);
     fileInput.value = "";
     renderFileList();
