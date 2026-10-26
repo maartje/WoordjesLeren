@@ -475,7 +475,10 @@
     height: 112px;
   }
   /* Het label staat in de onderste padding, buiten de flow: een label van twee regels
-     ('Over-geslagen') zou de balk anders omhoog duwen ten opzichte van de rest. */
+     ('Over-geslagen') zou de balk anders omhoog duwen ten opzichte van de rest.
+     De kolom is tegelijk een knop: aantikken kiest die categorie voor de volgende ronde.
+     Daarvan alleen terugdraaien wat de algemene button-regel aan vorm en vulling geeft,
+     net als bij .logo-home. */
   .histogram-col {
     position: relative;
     flex: 1 1 0;
@@ -484,8 +487,14 @@
     align-items: center;
     justify-content: flex-end;
     height: 100%;
-    padding-bottom: var(--label-space);
+    padding: 0 0 var(--label-space);
+    background: none;
+    border: none;
+    font: inherit;
+    cursor: pointer;
   }
+  /* Een lege balk valt niets te oefenen, maar hoeft ook geen grijssluier: hij is al leeg. */
+  .histogram-col:disabled { cursor: default; opacity: 1; }
   .histogram-count {
     font-size: 0.75rem;
     color: var(--muted);
@@ -514,6 +523,28 @@
     padding-top: 4px;
     text-align: center;
     line-height: 1.2;
+  }
+  /* De hele kolom kleurt mee, niet alleen de balk: bij een balk van één woord is een randje
+     om de balk te smal om te zien, en het label alleen is een te zwak signaal. */
+  .histogram-col.selected {
+    background: var(--accent-bg);
+    border-radius: 6px;
+  }
+  .histogram-col.selected .histogram-bar {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  .histogram-col.selected .histogram-count,
+  .histogram-col.selected .histogram-label {
+    color: var(--accent-dark);
+    font-weight: 700;
+  }
+  /* Gedempt accent: dit is een zijpad naast de hoofdknop onderaan, geen vervanging ervan. */
+  .btn-practice-selection {
+    width: 100%;
+    margin: 2px 0 14px;
+    background: var(--accent-bg);
+    color: var(--accent-dark);
   }
   /* De knop staat alleen; de groepskoppen eronder zijn de koppen van de lijst. */
   .round-groups-header {
@@ -1083,6 +1114,8 @@
     <div class="score-line" id="final-score"></div>
     <div class="score-sub" id="final-score-sub"></div>
     <div class="histogram" id="stats-histogram"></div>
+    <!-- Verschijnt pas zodra er een balk aangetikt is; de tekst draagt het aantal woorden. -->
+    <button class="btn-practice-selection hidden" id="btn-practice-selection" type="button"></button>
     <!-- De koppen van de groepen dienen als kop boven de lijst; hier staat alleen de knop. -->
     <div class="round-groups-header">
       <button class="btn-toggle-answers hidden" id="btn-toggle-answers">Toon antwoorden</button>
@@ -1206,6 +1239,7 @@
   const histogramEl = document.getElementById("stats-histogram");
   const emptyRoundEl = document.getElementById("empty-round");
   const btnToggleAnswers = document.getElementById("btn-toggle-answers");
+  const btnPracticeSelection = document.getElementById("btn-practice-selection");
   const btnLogo = document.getElementById("btn-logo");
   const selDirection = document.getElementById("sel-direction");
   const selSoundMode = document.getElementById("sel-sound-mode");
@@ -2108,6 +2142,13 @@
     return deckItems().filter((item) => !hasStateFor(item, dir));
   }
 
+  // De woorden onder een of meer balken van de histogram, voor de handmatige keuze op het
+  // eindscherm. Loopt over dezelfde deckItems() en dezelfde bucketFor(), dus het aantal op de
+  // knop is per definitie de som van de getallen boven de gekozen balken.
+  function itemsInBuckets(buckets, dir = direction) {
+    return deckItems().filter((item) => buckets.has(bucketFor(stateFor(item, dir))));
+  }
+
   // De fouten van de laatste afgeronde ronde. Die staan als sleutels in lastRound, dus ze
   // overleven een herlaad; woorden die daarna uit het deck zijn gehaald vallen vanzelf af.
   function lastRoundWrongItems(dir = direction) {
@@ -2547,6 +2588,8 @@
     endSplit.refresh();
 
     emptyRoundEl.classList.add("hidden");
+    selectedBuckets.clear();
+    refreshSelectionButton();
     renderHistogram(new Set(answeredItems));
     renderRoundGroups();
   }
@@ -2587,15 +2630,20 @@
     return { good, total: deck.length };
   }
 
+  // De enige plek waar staat welke categorie bij welke balk hoort. Ook de handmatige keuze op
+  // het eindscherm leest hieruit, zodat balk en selectie niet uit elkaar kunnen lopen.
+  // Uitgesloten woorden staan apart in de gouden balk en tellen dus niet mee in groen.
+  function bucketFor(state) {
+    if (state.x) return HISTOGRAM_EXCLUDED_BUCKET;
+    if (state.f > 0) return 1;
+    return state.g === 0 ? 0 : 1 + Math.min(state.g, 5);
+  }
+
   function computeHistogramBuckets(answeredNow) {
     const buckets = [0, 0, 0, 0, 0, 0, 0, 0];
     const now = [0, 0, 0, 0, 0, 0, 0, 0];
     for (const item of deckItems()) {
-      const state = stateFor(item);
-      // Uitgesloten woorden staan apart in de gouden balk en tellen dus niet mee in groen.
-      const bucket = state.x
-        ? HISTOGRAM_EXCLUDED_BUCKET
-        : (state.f > 0 ? 1 : (state.g === 0 ? 0 : 1 + Math.min(state.g, 5)));
+      const bucket = bucketFor(stateFor(item));
       buckets[bucket] += 1;
       if (answeredNow.has(item)) now[bucket] += 1;
     }
@@ -2625,14 +2673,46 @@
         const part = now[i] > 0
           ? `<div class="histogram-bar-part" style="height:${(now[i] / count) * 100}%; background:${nowColor(i)};"></div>`
           : "";
-        return `<div class="histogram-col">
+        return `<button type="button" class="histogram-col" data-bucket="${i}" aria-pressed="false"${count === 0 ? " disabled" : ""}>
           <div class="histogram-count">${count}</div>
           <div class="histogram-bar" style="height:${heightPct}%; background:${HISTOGRAM_COLORS[i]};" title="${title}">${part}</div>
           <div class="histogram-label">${HISTOGRAM_LABELS[i]}</div>
-        </div>`;
+        </button>`;
       })
       .join("")}</div>`;
   }
+
+  // ---------- Categorie kiezen op het eindscherm ----------
+  // De balken zijn zelf de keuze. De selectie leeft alleen zolang dit eindscherm staat:
+  // showEndScreen() maakt hem leeg en renderHistogram() bouwt de kolommen opnieuw op.
+  const selectedBuckets = new Set();
+
+  function refreshSelectionButton() {
+    const count = selectedBuckets.size === 0 ? 0 : itemsInBuckets(selectedBuckets, direction).length;
+    btnPracticeSelection.classList.toggle("hidden", count === 0);
+    btnPracticeSelection.textContent = `Oefen deze ${count} ${count === 1 ? "woord" : "woorden"}`;
+  }
+
+  // Alleen de aangetikte kolom omzetten; opnieuw renderen zou de rest nodeloos opbouwen.
+  // Een lege balk is `disabled`, dus daar komt geen klik vandaan.
+  histogramEl.addEventListener("click", (e) => {
+    const col = e.target.closest(".histogram-col");
+    if (!col) return;
+    const bucket = Number(col.dataset.bucket);
+    const on = !selectedBuckets.has(bucket);
+    if (on) selectedBuckets.add(bucket);
+    else selectedBuckets.delete(bucket);
+    col.classList.toggle("selected", on);
+    col.setAttribute("aria-pressed", String(on));
+    refreshSelectionButton();
+  });
+
+  // Geen plafond: wie een categorie aanwijst wil hem hele. Het aantal staat op de knop, dus
+  // dat is een keuze en geen verrassing. De richting komt expliciet mee, want de histogram is
+  // voor de richting van de zojuist gespeelde ronde berekend.
+  btnPracticeSelection.addEventListener("click", () => {
+    beginSession(ordered(itemsInBuckets(selectedBuckets, direction)), direction);
+  });
 
   // ---------- Slim oefenen: spaced repetition ----------
   const SMART_MIN_ITEMS = 5;
